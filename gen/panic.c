@@ -43,11 +43,12 @@ void kernel_panic(const char *msg) {
     printk("If this problem persists, check drivers, memory,\n");
     printk("or recent kernel changes.\n");
     printk("--------------------------------------------------\n");
-    printk("PCI DEVIC: \n");
+    printk("PCI DEVICE: \n");
     scanAll();
     for (;;) {
         __asm__ __volatile__("hlt");
     }
 }
+
 
 

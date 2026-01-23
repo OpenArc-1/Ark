@@ -8,6 +8,7 @@
 #include "ark/types.h"
 #include "ark/printk.h"
 #include "ark/panic.h"
+#include "clear.h"
 
 /* Forward declarations for future subsystems. */
 bool fs_has_init(void);
@@ -39,6 +40,7 @@ static void wait_for_init_bin(void) {
 }
 
 void kernel_main(void) {
+    clear_screen();
     printk("[    0.000000] Ark kernel booting on x86\n");
     printk("[    0.000001] Boot params: stub (no cmdline yet)\n");
 
@@ -70,4 +72,5 @@ bool fs_has_init(void) {
 void fs_mount_root(void) {
     printk("[    0.000150] fs: root mount stub (no real FS yet)\n");
 }
+
 

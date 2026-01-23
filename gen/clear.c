@@ -6,5 +6,4 @@ void clear_screen() {
         VGA_MEMORY[i * 2 + 1] = WHITE_ON_BLACK;
     }
     cursor_pos = 0;
-    update_cursor();
 }

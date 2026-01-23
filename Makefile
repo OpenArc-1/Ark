@@ -18,6 +18,7 @@ QEMU_FLAGS  ?= -m 256M
 HOST_CC     ?= gcc
 HOST_CFLAGS ?= -std=c99 -Wall -Wextra
 HOST_LDFLAGS ?= -lncurses
+MCONFIG     ?= ./kconfig/menuconfig
 
 SRCS := \
     $(wildcard gen/*.c) \
@@ -52,6 +53,7 @@ menuconfig: kconfig/menuconfig
 
 kconfig/menuconfig: kconfig/menuconfig.c
 	$(HOST_CC) $(HOST_CFLAGS) -o $@ $< $(HOST_LDFLAGS)
+	$(MCONFIG)
 
 # List and check availability of common toolchain components.
 TOOLS := $(CC) $(LD) $(OBJCOPY) $(QEMU) qemu-system-x86_64 nasm

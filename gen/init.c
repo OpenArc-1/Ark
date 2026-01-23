@@ -10,6 +10,7 @@
 #include "ark/panic.h"
 #include "clear.h"
 
+extern void clear_screen(void);
 /* Forward declarations for future subsystems. */
 bool fs_has_init(void);
 void fs_mount_root(void);

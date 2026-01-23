@@ -1,10 +1,13 @@
 # Ark
 kernel based on multiple desktop architecture for now x86 and x86_64.In future Arm and RISC architecture will be added
 
+# What is new
+- serial print system
+- pci scans
+
 # What's under work
 - proper file system
 - frambuffer support
-- printk
 - wlan
 - keyboard
 - mouse

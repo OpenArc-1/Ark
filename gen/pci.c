@@ -32,8 +32,7 @@ void scanAll(void){
 
                 u16 device_id = (value >> 16) & 0xFFFF;
 
-                printk("PCI: bus: %u  slot: %u  func:  %u  Device: %04x ",
-                bus ,slot , func ,device_id);
+                printk("PCI: bus: %u  slot: %u  func:  %u  Device: %04x \n", bus ,slot , func ,device_id);
 
 
             }
@@ -41,4 +40,5 @@ void scanAll(void){
     }
 
 }
+
 

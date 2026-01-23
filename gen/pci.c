@@ -1,11 +1,10 @@
 # include "ark/printk.h"
-# include "ark/printk.h"
 # include "pci.h"
-# include "ark/io.h" // needed for otll to read and write through ports
+# include "../io/built-in.h" // needed for otll to read and write through ports
 
 
-// SEND TO ADDRESS PORT(OXCF8) AND READ FROM 0XCFC // 
-//  NOTE :  0XCF8 --->  ADRESS PORT  && 0XCFC --> DATA PORT 
+// SEND TO ADDRESS PORT(OXCF8) AND READ FROM 0XCFC //
+//  NOTE :  0XCF8 --->  ADRESS PORT  && 0XCFC --> DATA PORT
 
 u32 pciread(u8 bus , u8 slot , u8 func , u8 offset){
 
@@ -21,8 +20,8 @@ u32 pciread(u8 bus , u8 slot , u8 func , u8 offset){
     return inl(0xCFC); // READ IT THROUGH data port(0xCFC);
 }
 
-// loop through pci and finding the port 
-void  scanAll(void){
+// loop through pci and finding the port
+void scanAll(void){
     for (u8 bus = 0 ; bus < 30 ; bus++){
         for (u8 slot = 0 ;slot < 30 ; slot ++){
             for (u8 func = 0; func < 8 ; func++){

@@ -1,6 +1,5 @@
-#ARK BUILD ID !93
-MOD = 12
-KV = 1.0
+# Simple build system for Ark kernel (x86, Multiboot, linear framebuffer).
+
 ARCH        ?= x86
 # Build with the host GCC as a 32‑bit freestanding compiler.
 CC          ?= gcc
@@ -80,5 +79,4 @@ help:
 	@echo "  make list    - list build tools"
 	@echo "  make help    - show this help message"
 .PHONY: all clean run list
-
 

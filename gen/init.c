@@ -9,7 +9,6 @@
 #include "ark/printk.h"
 #include "ark/panic.h"
 #include "clear.h"
-#include "pci.h" //new mod created by yahya mokhlis
 
 extern void clear_screen(void);
 /* Forward declarations for future subsystems. */
@@ -42,16 +41,18 @@ static void wait_for_init_bin(void) {
 }
 
 void kernel_main(void) {
+    //use_serial = false;  
+    //if (use_serial) serial_init();
+    serial_init();
     clear_screen();
-    scanAll();
     busy_delay(20000000);
     printk("[    0.000000] Ark kernel booting on x86\n");
     printk("[    0.000001] Boot params: stub (no cmdline yet)\n");
-
+    
     printk("[    0.000100] Initialising core subsystems...\n");
     /* TODO: initialise memory manager, scheduler, device model, etc. */
     busy_delay(20000000);
-
+    
     printk("[    0.000200] Mounting root filesystem (stub)...\n");
     fs_mount_root();
     busy_delay(20000000);

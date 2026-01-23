@@ -1,22 +1,21 @@
-/*Written by Yahya Mokhlis 1/23/2026*/
 # include "ark/printk.h"
 # include "pci.h"
 # include "../io/built-in.h" // needed for otll to read and write through ports
 
 
 // SEND TO ADDRESS PORT(OXCF8) AND READ FROM 0XCFC //
-//  NOTE :  0XCF8 --->  ADDRESS PORT  && 0XCFC --> DATA PORT
+//  NOTE :  0XCF8 --->  ADRESS PORT  && 0XCFC --> DATA PORT
 
 u32 pciread(u8 bus , u8 slot , u8 func , u8 offset){
 
-    u32 address =
+    u32 adress =
         (1 << 31)    |
         (bus << 16)  |
         (slot << 11) |
         (func << 8)  |
         (offset & 0xFC);
 
-    outl (0xCF8,address); // send adress to the 0xCF8;
+    outl (0xCF8,adress); // send adress to the 0xCF8;
 
     return inl(0xCFC); // READ IT THROUGH data port(0xCFC);
 }
@@ -33,12 +32,7 @@ void scanAll(void){
                 u16 device_id = (value >> 16) & 0xFFFF;
 
                 printk("PCI: bus: %u  slot: %u  func:  %u  Device: %04x \n", bus ,slot , func ,device_id);
-
-
             }
         }
     }
-
 }
-
-

@@ -6,6 +6,7 @@
 #include "ark/printk.h"
 #include "ark/panic.h"
 #include "init.h"
+#include "pci.h" //new mod created by yahya mokhlis
 
 static void busy_delay(u32 loops) {
     for (volatile u32 i = 0; i < loops; ++i) {
@@ -42,7 +43,8 @@ void kernel_panic(const char *msg) {
     printk("If this problem persists, check drivers, memory,\n");
     printk("or recent kernel changes.\n");
     printk("--------------------------------------------------\n");
-
+    printk("PCI DEVIC: \n");
+    scanAll();
     for (;;) {
         __asm__ __volatile__("hlt");
     }

@@ -1,5 +1,6 @@
-# Simple build system for Ark kernel (x86, Multiboot, linear framebuffer).
-
+#ARK BUILD ID !93
+MOD = 12
+KV = 1.0
 ARCH        ?= x86
 # Build with the host GCC as a 32‑bit freestanding compiler.
 CC          ?= gcc
@@ -18,6 +19,7 @@ QEMU_FLAGS  ?= -m 256M
 HOST_CC     ?= gcc
 HOST_CFLAGS ?= -std=c99 -Wall -Wextra
 HOST_LDFLAGS ?= -lncurses
+MCONFIG     ?= ./kconfig/menuconfig
 
 SRCS := \
     $(wildcard gen/*.c) \
@@ -52,6 +54,7 @@ menuconfig: kconfig/menuconfig
 
 kconfig/menuconfig: kconfig/menuconfig.c
 	$(HOST_CC) $(HOST_CFLAGS) -o $@ $< $(HOST_LDFLAGS)
+	$(MCONFIG)
 
 # List and check availability of common toolchain components.
 TOOLS := $(CC) $(LD) $(OBJCOPY) $(QEMU) qemu-system-x86_64 nasm
@@ -77,4 +80,5 @@ help:
 	@echo "  make list    - list build tools"
 	@echo "  make help    - show this help message"
 .PHONY: all clean run list
+
 

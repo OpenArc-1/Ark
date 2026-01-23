@@ -5,11 +5,13 @@
  * from arch-specific code (e.g. arch_x86_64_entry).
  */
 
+#include <stdint.h>
 #include "ark/types.h"
 #include "ark/printk.h"
 #include "ark/panic.h"
 #include "clear.h"
 
+extern void clear_screen(void);
 /* Forward declarations for future subsystems. */
 bool fs_has_init(void);
 void fs_mount_root(void);
@@ -20,6 +22,19 @@ static void busy_delay(u32 loops) {
     }
 }
 
+static inline void outb(uint16_t port, uint8_t val) {
+    __asm__ __volatile__("outb %0, %1" : : "a"(val), "Nd"(port));
+}
+
+void set_cursor_block() {
+    // Cursor start = scanline 0
+    outb(0x3D4, 0x0A);
+    outb(0x3D5, 0x00);
+
+    // Cursor end = scanline 15 (full height)
+    outb(0x3D4, 0x0B);
+    outb(0x3D5, 0x0F);
+}
 static void wait_for_init_bin(void) {
     /* Linux-like messages while we "wait" for /init.bin to appear.
      * Since there is no real filesystem yet, this just retries a
@@ -40,6 +55,7 @@ static void wait_for_init_bin(void) {
 }
 
 void kernel_main(void) {
+    set_cursor_block();
     clear_screen();
     printk("[    0.000000] Ark kernel booting on x86\n");
     printk("[    0.000001] Boot params: stub (no cmdline yet)\n");
@@ -54,7 +70,6 @@ void kernel_main(void) {
 
     printk("[    0.000300] Probing for /init.bin\n");
     wait_for_init_bin();
-
     /* If fs_has_init ever returns true, we would "launch" init here. */
     printk("[    0.600000] Launching init (stub)...\n");
     kernel_panic("Reached end of kernel_main without real init");

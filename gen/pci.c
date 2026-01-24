@@ -1,3 +1,5 @@
+/*originally written by Yahya Mokhlis*/
+/*rewritten by Adnan*/
 # include "ark/printk.h"
 # include "pci.h"
 # include "../io/built-in.h" // needed for I/O to read and write through ports
@@ -71,4 +73,5 @@ void scanAll(void){
             }
         }
     }
+
 }

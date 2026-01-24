@@ -48,7 +48,9 @@ clean:
 	rm -f kconfig/menuconfig
 
 run: bzImage
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage
+	$(QEMU) $(QEMU_FLAGS) -kernel bzImage \
+	        -device e1000,netdev=net0 \
+	        -netdev user,id=net0
 
 # Host-side menuconfig tool (uses ncurses) to write .kconfig.
 menuconfig: kconfig/menuconfig

@@ -7,6 +7,7 @@
 #include "ark/panic.h"
 #include "init.h"
 #include "pci.h" //new mod created by yahya mokhlis
+#include "input.h"
 
 static void busy_delay(u32 loops) {
     for (volatile u32 i = 0; i < loops; ++i) {
@@ -19,8 +20,12 @@ void kernel_panic(const char *msg) {
     busy_delay(20000000);
     printk("[    0.000210] type </TASK> to run it\n");
     busy_delay(20000000);
+    char input_buffer[12];
+    printk("path(/usr/): ");
+    input_read(input_buffer, sizeof(input_buffer), false);
+    printk("%s: NOT FOUND!!!\n", input_buffer);
     printk("[    0.012000][K:found ps/2] please recompile with the </task>");
-    printk("\n\n");
+    printk("\n");
     printk("--------------------------------------------------\n");
     printk("                 K E R N E L   P A N I C           \n");
     printk("--------------------------------------------------\n\n");
@@ -35,7 +40,6 @@ void kernel_panic(const char *msg) {
     }
 
     printk("\nSystem state  : HALTED\n");
-    printk("Recovery      : Reboot required\n");
     printk("Kernel mode   : Protected\n");
     printk("\n");
 
@@ -43,8 +47,6 @@ void kernel_panic(const char *msg) {
     printk("If this problem persists, check drivers, memory,\n");
     printk("or recent kernel changes.\n");
     printk("--------------------------------------------------\n");
-    printk("PCI DEVICE: \n");
-    scanAll();
     for (;;) {
         __asm__ __volatile__("hlt");
     }

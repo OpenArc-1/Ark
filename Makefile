@@ -27,7 +27,9 @@ SRCS := \
     $(wildcard hid/*.c) \
     $(wildcard io/*.c) \
     $(wildcard ks/*.c) \
+    $(wildcard mem/*.c) \
     $(wildcard mp/*.c) \
+    $(wildcard usb/*.c) \
     $(wildcard wf/*.c) \
     $(wildcard arch/$(ARCH)/*.c)
 

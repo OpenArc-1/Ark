@@ -16,8 +16,12 @@ static const unsigned int multiboot_header[] = {
 #include "ark/multiboot.h"
 #include "ark/printk.h"
 #include "ark/panic.h"
+#include "ark/fb.h"
 
 void kernel_main(void);
+
+/* Global framebuffer info available to kernel */
+ark_fb_info_t g_fb_info;
 
 /* ELF entrypoint for the kernel. A Multiboot loader will still set
  * EAX/EBX per spec before jumping here, but we currently ignore them
@@ -32,7 +36,12 @@ void _start(void) {
 }
 
 static void arch_setup_framebuffer(multiboot_info_t *mbi) {
-    (void)mbi; /* Framebuffer setup is not used in the VGA-only path. */
+    /* Extract framebuffer info from multiboot header */
+    g_fb_info.addr = (u8 *)(u32)mbi->framebuffer_addr;
+    g_fb_info.pitch = mbi->framebuffer_pitch;
+    g_fb_info.width = mbi->framebuffer_width;
+    g_fb_info.height = mbi->framebuffer_height;
+    g_fb_info.bpp = mbi->framebuffer_bpp;
 }
 
 void arch_x86_entry(u32 magic, u32 mb_info) {

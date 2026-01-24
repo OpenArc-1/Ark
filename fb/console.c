@@ -21,8 +21,8 @@ static void fb_draw_cell(u32 x, u32 y, u32 argb) {
         return;
     }
 
-    const u32 char_w = 8;
-    const u32 char_h = 16;
+    const u32 char_w = 6;
+    const u32 char_h = 8;
     u32 px = x * char_w;
     u32 py = y * char_h;
 
@@ -67,7 +67,7 @@ void fb_clear(void) {
 }
 
 static void fb_scroll(void) {
-    const u32 char_h = 16;
+    const u32 char_h = 8;
     const u32 rows = fb_info.height / char_h;
 
     if (!fb_info.addr || rows == 0) {
@@ -99,8 +99,8 @@ static void fb_scroll(void) {
 }
 
 void fb_putc(char c) {
-    const u32 char_w = 8;
-    const u32 char_h = 16;
+    const u32 char_w = 6;
+    const u32 char_h = 8;
     const u32 cols = fb_info.width / char_w;
     const u32 rows = fb_info.height / char_h;
 

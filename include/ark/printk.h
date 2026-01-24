@@ -18,3 +18,7 @@
  /* Optional: initialize serial port */
  void serial_init(void);
  
+ /* Serial input functions */
+ bool serial_has_input(void);
+ u8 serial_getc(void);
+ 

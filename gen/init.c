@@ -1,19 +1,25 @@
 /**
- * Core kernel boot flow for Ark.
- *
+* Core kernel boot flow for Ark.
+*
  * This is architecture-agnostic high-level logic that is entered
  * from arch-specific code (e.g. arch_x86_64_entry).
  */
 
-#include "ark/types.h"
+ #include "ark/types.h"
 #include "ark/printk.h"
 #include "ark/panic.h"
 #include "clear.h"
+#include "../usb/usb.h"
+#include "ark/fb.h"
 
 extern void clear_screen(void);
+extern void usb_init(void);
+extern ark_fb_info_t g_fb_info;  /* Framebuffer info from bootloader */
 /* Forward declarations for future subsystems. */
 bool fs_has_init(void);
 void fs_mount_root(void);
+void input_init(void);  /* Input subsystem manager */
+void input_poll(void);  /* Poll input devices */
 
 static void busy_delay(u32 loops) {
     for (volatile u32 i = 0; i < loops; ++i) {
@@ -41,8 +47,7 @@ static void wait_for_init_bin(void) {
 }
 
 void kernel_main(void) {
-    //use_serial = false;  
-    //if (use_serial) serial_init();
+    fb_init(&g_fb_info);
     serial_init();
     clear_screen();
     busy_delay(20000000);
@@ -51,8 +56,10 @@ void kernel_main(void) {
     
     printk("[    0.000100] Initialising core subsystems...\n");
     /* TODO: initialise memory manager, scheduler, device model, etc. */
+    input_init();  /* Initialize input subsystem (keyboard, touch, etc.) */
     busy_delay(20000000);
-    
+    usb_init();
+    busy_delay(20000000);
     printk("[    0.000200] Mounting root filesystem (stub)...\n");
     fs_mount_root();
     busy_delay(20000000);
@@ -63,6 +70,10 @@ void kernel_main(void) {
     /* If fs_has_init ever returns true, we would "launch" init here. */
     printk("[    0.600000] Launching init (stub)...\n");
     printk("[    0.670000] Launching init (blob)...\n");
+    
+    /* Poll input devices while waiting */
+    input_poll();
+    
     busy_delay(20000000);
     kernel_panic("Reached end of kernel_main without real init");
 }
@@ -79,5 +90,4 @@ bool fs_has_init(void) {
 void fs_mount_root(void) {
     printk("[    0.000150] fs: root mount stub\n");
 }
-
 

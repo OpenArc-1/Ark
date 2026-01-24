@@ -6,7 +6,6 @@
  */
 
  #include <stdarg.h>
-// #include <stdbool.h>
  #include "ark/types.h"
  #include "ark/printk.h"
  
@@ -43,18 +42,53 @@
      outb(COM1, c);
  }
  
+ /* Check if serial port has data available */
+ bool serial_has_input(void) {
+     return (inb(COM1 + 5) & 0x01) != 0;  /* Bit 0 = data ready */
+ }
+ 
+ /* Read a character from serial port (non-blocking) */
+ u8 serial_getc(void) {
+     if (!serial_has_input())
+         return 0;
+     return inb(COM1);
+ }
+ 
  /* --- VGA --- */
  #define VGA_WIDTH   80
  #define VGA_HEIGHT  25
  #define VGA_ATTR    0x0F
+ #define VGA_CURSOR_ATTR 0x70  /* Inverted colors for cursor */
  
  static volatile u16 *const vga_buf = (volatile u16 *)0xB8000;
  static u32 vga_row = 0;
  static u32 vga_col = 0;
+ static bool cursor_initialized = false;
  
  static void vga_put_at(u32 row, u32 col, char c, u8 attr) {
      if (row >= VGA_HEIGHT || col >= VGA_WIDTH) return;
      vga_buf[row * VGA_WIDTH + col] = ((u16)attr << 8) | (u8)c;
+ }
+ 
+ static void vga_update_cursor(void) {
+     /* Display cursor as inverted block at current position */
+     u16 cursor_pos = vga_row * VGA_WIDTH + vga_col;
+     if (cursor_pos < VGA_WIDTH * VGA_HEIGHT) {
+         u16 current = vga_buf[cursor_pos];
+         char c = (char)(current & 0xFF);
+         if (c == 0) c = ' ';  /* Show space if empty */
+         vga_buf[cursor_pos] = ((u16)VGA_CURSOR_ATTR << 8) | (u8)c;
+     }
+ }
+ 
+ static void vga_erase_cursor(void) {
+     /* Erase cursor by redrawing with normal attribute */
+     u16 cursor_pos = vga_row * VGA_WIDTH + vga_col;
+     if (cursor_pos < VGA_WIDTH * VGA_HEIGHT) {
+         u16 current = vga_buf[cursor_pos];
+         char c = (char)(current & 0xFF);
+         vga_buf[cursor_pos] = ((u16)VGA_ATTR << 8) | (u8)c;
+     }
  }
  
  static void vga_scroll(void) {
@@ -67,12 +101,30 @@
  }
  
  static void vga_putc(char c) {
+     /* Initialize cursor on first output */
+     if (!cursor_initialized) {
+         cursor_initialized = true;
+         vga_update_cursor();
+         return;
+     }
+     
+     vga_erase_cursor();  /* Remove cursor from current position */
+     
      if (c == '\n') { vga_col = 0; vga_row++; }
      else if (c == '\r') { vga_col = 0; }
+     else if (c == '\b') {
+         /* Backspace: move cursor back and erase */
+         if (vga_col > 0) {
+             vga_col--;
+             vga_put_at(vga_row, vga_col, ' ', VGA_ATTR);
+         }
+     }
      else { vga_put_at(vga_row, vga_col, c, VGA_ATTR); vga_col++; }
  
      if (vga_col >= VGA_WIDTH) { vga_col = 0; vga_row++; }
      if (vga_row >= VGA_HEIGHT) vga_scroll();
+     
+     vga_update_cursor();  /* Draw cursor at new position */
  }
  
  /* --- Unified putc --- */

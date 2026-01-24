@@ -22,14 +22,17 @@ typedef unsigned long long  u64;
 typedef u64                 usize;
 typedef i64                 isize;
 
+/* Only define bool if not already defined by stdbool.h */
+#if !defined(__bool_true_false_are_defined)
 typedef u8                  bool;
+#endif
 
 #ifndef true
-#define true  ((bool)1)
+#define true  1
 #endif
 
 #ifndef false
-#define false ((bool)0)
+#define false 0
 #endif
 
 #define NULL ((void *)0)

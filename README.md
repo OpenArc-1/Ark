@@ -2,14 +2,15 @@
 kernel based on multiple desktop architecture for now x86 and x86_64.In future Arm and RISC architecture will be added
 
 # What is new
-- serial print system
-- pci scans
+- serial input system
+- usb scan
+- keyboard driver
+- input for task run system
 
 # What's under work
 - proper file system
 - frambuffer support
 - wlan
-- keyboard
 - mouse
 - kernel scripting
 - modprobes

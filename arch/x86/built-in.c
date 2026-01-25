@@ -17,6 +17,7 @@ static const unsigned int multiboot_header[] = {
 #include "ark/printk.h"
 #include "ark/panic.h"
 #include "ark/fb.h"
+#include "../fs/modules.h"
 
 void kernel_main(void);
 
@@ -61,6 +62,9 @@ void arch_x86_entry(u32 magic, u32 mb_info) {
            (unsigned)mbi->framebuffer_addr,
            (unsigned)mbi->framebuffer_bpp,
            (unsigned)mbi->framebuffer_pitch);
+
+    /* Load any modules provided by the bootloader */
+    modules_load_from_multiboot(mbi);
 
     kernel_main();
 

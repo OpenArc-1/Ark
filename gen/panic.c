@@ -18,12 +18,14 @@ static void busy_delay(u32 loops) {
 void kernel_panic(const char *msg) {
     __asm__ __volatile__("cli");  // Stop interrupts
     busy_delay(20000000);
+    printk("[    0.000030] Found something in ramfs.please renter the </TASK>\n");
+    busy_delay(20000000);
     printk("[    0.000210] type </TASK> to run it\n");
     busy_delay(20000000);
-    char input_buffer[12];
-    printk("path(/usr/): ");
-    input_read(input_buffer, sizeof(input_buffer), false);
-    printk("%s: NOT FOUND!!!\n", input_buffer);
+    //char input_buffer[12];
+   // printk("path(/usr/): ");
+    //input_read(input_buffer, sizeof(input_buffer), false);
+    //printk("%s: NOT FOUND!!!\n", input_buffer);
     printk("[    0.012000][K:found ps/2] please recompile with the </task>");
     printk("\n");
     printk("--------------------------------------------------\n");

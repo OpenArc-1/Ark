@@ -6,6 +6,7 @@
 #define PCI_CLASS_SERIAL 0x0C
 #define PCI_SUBCLASS_USB 0x03
 #define PCI_PROGIF_EHCI  0x20
+#define EHCI_REG_SIZE 0x1000
 
 typedef volatile uint32_t vuint32_t;
 
@@ -42,7 +43,7 @@ static void ehci_init(uint32_t bar0) {
 
     printk("EHCI MMIO Base: %x\n", base);
 
-    ehci = (ehci_op_regs_t*)mmio_map(base);
+    ehci = (ehci_op_regs_t*)mmio_map(base, EHCI_REG_SIZE);
 
     if (!ehci) {
         printk("EHCI map failed\n");

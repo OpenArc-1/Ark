@@ -4,7 +4,7 @@
 
 set -e
 
-KERNEL_FILE="${1:-bzImage}"
+KERNEL_FILE="${1:-../bzImage}"
 OUTPUT_IMAGE="${2:-ark.img}"
 SIZE_MB="${3:-256}"
 
@@ -53,7 +53,7 @@ cat > "$TMPDIR/grub.cfg" << 'EOF'
 set timeout=5
 set default=0
 
-menuentry 'Ark OS' {
+menuentry 'Ark based demo bootable image' {
     multiboot /bzImage
 }
 EOF

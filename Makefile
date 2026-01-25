@@ -64,7 +64,9 @@ disk.img: bzImage
 run-disk: disk.img
 	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=disk.img,format=raw -m 256M
 run: bzImage
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage
+	$(QEMU) $(QEMU_FLAGS) -kernel bzImage \
+	        -device e1000,netdev=net0 \
+	        -netdev user,id=net0
 
 # Run kernel with external init.bin as Multiboot module
 run-with-init: bzImage init.bin

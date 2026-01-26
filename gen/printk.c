@@ -8,7 +8,7 @@
  #include <stdarg.h>
  #include "ark/types.h"
  #include "ark/printk.h"
- 
+
  /* --- COM1 serial --- */
  #define COM1 0x3F8
  
@@ -180,3 +180,6 @@
      return count;
  }
  
+int read(int fd, char *buf, int len);
+int write(int fd, const char *buf, int len);
+void exit(int code);

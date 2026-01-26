@@ -86,3 +86,19 @@ u8 ramfs_has_init(void);
  * @return Pointer to init.bin data, or NULL if not found
  */
 u8 *ramfs_get_init(u32 *out_size);
+
+/**
+ * Get file count in ramfs
+ * @return Number of files in ramfs
+ */
+u32 ramfs_get_file_count(void);
+
+/**
+ * Get file by index (for iteration)
+ * @param index File index (0 to file_count-1)
+ * @param out_filename Buffer to store filename (must be at least RAMFS_MAX_FILENAME bytes)
+ * @param out_data Pointer to store file data pointer
+ * @param out_size Pointer to store file size
+ * @return 1 if file exists at index, 0 otherwise
+ */
+u8 ramfs_get_file_by_index(u32 index, char *out_filename, u8 **out_data, u32 *out_size);

@@ -1,48 +1,56 @@
 /**
- * Userspace syscall wrapper library
- * Uses int 0x80 to invoke kernel syscalls
+ * Userspace syscall wrapper header
+ * Provides convenient functions to call kernel syscalls
  */
 
-#ifndef __SYSCALL_H__
-#define __SYSCALL_H__
+#ifndef __USERSPACE_SYSCALL_H__
+#define __USERSPACE_SYSCALL_H__
 
-#include "../include/ark/types.h"
-
-#define SYS_WRITE   1
-#define SYS_READ    3
-#define SYS_EXIT    60
-
-#define STDOUT_FILENO 1
-#define STDERR_FILENO 2
+#define SYS_READ  0
+#define SYS_WRITE 1
+#define SYS_EXIT  60
+#define SYS_PRINTK 4
 
 /**
- * Write via int 0x80 syscall
+ * Syscall wrapper - calls int 0x80
+ * eax = syscall number
+ * ebx = arg1
+ * ecx = arg2
+ * edx = arg3
+ * Returns value in eax
  */
-static inline long write(int fd, const void *buf, unsigned long count) {
-    long result;
-    
-    __asm__ __volatile__ (
+static inline int syscall(int number, int arg1, int arg2, int arg3) {
+    int result;
+    __asm__ __volatile__(
         "int $0x80"
         : "=a" (result)
-        : "a" (SYS_WRITE),      /* eax = syscall number */
-          "b" (fd),              /* ebx = fd */
-          "c" (buf),             /* ecx = buffer */
-          "d" (count)            /* edx = count */
+        : "a" (number), "b" (arg1), "c" (arg2), "d" (arg3)
         : "memory"
     );
-    
     return result;
 }
 
 /**
- * Simple puts - print string with newline
+ * Read from stdin
  */
-static void uspace_puts(const char *s) {
-    while (*s) {
-        write(STDOUT_FILENO, s, 1);
-        s++;
-    }
-    write(STDOUT_FILENO, "\n", 1);
+static inline int read(int fd, char *buf, unsigned int count) {
+    return syscall(SYS_READ, fd, (int)buf, count);
 }
 
-#endif
+/**
+ * Write to stdout/stderr
+ */
+static inline int write(int fd, const char *buf, unsigned int count) {
+    return syscall(SYS_WRITE, fd, (int)buf, count);
+}
+
+/**
+ * Exit program
+ */
+static inline void exit(int code) {
+    syscall(SYS_EXIT, code, 0, 0);
+    /* Should not return, but loop if it does */
+    while (1) {}
+}
+
+#endif /* __USERSPACE_SYSCALL_H__ */

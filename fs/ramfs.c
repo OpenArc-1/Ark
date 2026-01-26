@@ -164,3 +164,39 @@ u8 ramfs_has_init(void) {
 u8 *ramfs_get_init(u32 *out_size) {
     return ramfs_get_file("/init.bin", out_size);
 }
+
+/**
+ * Get file count in ramfs
+ */
+u32 ramfs_get_file_count(void) {
+    return g_ramfs_file_count;
+}
+
+/**
+ * Get file by index (for iteration)
+ * @param index File index (0 to file_count-1)
+ * @param out_filename Buffer to store filename (must be at least RAMFS_MAX_FILENAME bytes)
+ * @param out_data Pointer to store file data pointer
+ * @param out_size Pointer to store file size
+ * @return 1 if file exists at index, 0 otherwise
+ */
+u8 ramfs_get_file_by_index(u32 index, char *out_filename, u8 **out_data, u32 *out_size) {
+    if (index >= g_ramfs_file_count || !out_filename || !out_data || !out_size)
+        return 0;
+    
+    if (!g_ramfs_files[index].valid)
+        return 0;
+    
+    /* Copy filename */
+    u32 i = 0;
+    while (g_ramfs_files[index].filename[i] && i < RAMFS_MAX_FILENAME - 1) {
+        out_filename[i] = g_ramfs_files[index].filename[i];
+        i++;
+    }
+    out_filename[i] = '\0';
+    
+    *out_data = g_ramfs_files[index].data;
+    *out_size = g_ramfs_files[index].size;
+    
+    return 1;
+}

@@ -25,8 +25,9 @@ SRCS := \
     $(wildcard wf/*.c) \
     $(wildcard arch/$(ARCH)/*.c) \
 
-# Userspace sources (init.bin)
-USERSPACE_SRCS := $(wildcard userspace/*.c) gen/printk.c gen/input.c gen/syscall.c hid/kbd100.c
+# Userspace sources (init.bin - shell)
+USERSPACE_SRCS := $(wildcard userspace/*.c)
+USERSPACE_ASM := $(wildcard userspace/*.S)
 # Assembly files
 NASMSRCS := mp/bios.S
 GASSRCS  := $(wildcard arch/$(ARCH)/*.S)
@@ -38,6 +39,7 @@ OBJS += $(GASSRCS:.S=.o)
 
 # Userspace object files (init.bin)
 USERSPACE_OBJS := $(USERSPACE_SRCS:.c=.o)
+USERSPACE_OBJS += $(USERSPACE_ASM:.S=.o)
 
 # Default target
 all: bzImage init.bin
@@ -64,34 +66,58 @@ mp/%.o: mp/%.S
 arch/$(ARCH)/%.o: arch/$(ARCH)/%.S
 	$(AS) --32 -o $@ $<
 
+# Compile userspace assembly files
+userspace/%.o: userspace/%.S
+	$(AS) --32 -o $@ $<
+
 # Clean build
 clean:
-	rm -f $(OBJS) $(USERSPACE_OBJS) bzImage init.bin init.elf disk.img disk-with-fs.img disk-with-init.img
+	rm -f $(OBJS) $(USERSPACE_OBJS) bzImage disk.img disk-with-fs.img disk-with-init.img
 
 # Bootable disk image (optional)
 disk.img: bzImage
 	@scripts/create_bootable_image.py bzImage disk.img 256
 
 # Disk image with init.bin in FAT32 filesystem
-disk-with-fs.img: bzImage init.bin
-	@echo "[*] Creating disk image with init.bin in FAT32..."
-	@python3 scripts/create_disk_with_init.py bzImage init.bin disk-with-fs.img 256
+disk-with-fs.img: bzImage 
+	@echo "[*] Creating disk image with FAT32..."
+	@python3 scripts/create_disk_with_init.py bzImage disk-with-fs.img 256
 
 # QEMU targets
 run: bzImage
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -initrd init.bin
+	$(QEMU) $(QEMU_FLAGS) -kernel bzImage 
 
 run-disk: disk.img
 	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=disk.img,format=raw -m 256M -device e1000 -usb -device usb-kbd -device usb-mouse
 
 run-with-init: bzImage init.bin
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -initrd init.bin -nographic -m 256
+	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -nographic -m 256 -initrd init, init.bin
 
 run-disk-with-fs: disk-with-fs.img
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=disk-with-fs.img,format=raw -m 256M -device e1000 -usb -device usb-kbd -device usb-mouse
+	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=disk-with-fs.img,format=raw -m 256M -device e1000 -usb -device usb-kbd -device usb-mouse 
 
 run-nographic: bzImage
 	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -nographic -device e1000 -usb -device usb-kbd -device usb-mouse
 
+# Run with script-based init system
+# Loads both the init script and init.bin as multiboot modules
+# Note: QEMU passes modules via -initrd with comma-separated files
+# The module names will be set by QEMU, but our scanner will find the #!init script
+run-with-script: bzImage init.bin init
+	@echo "[*] Running kernel with script-based init system..."
+	@echo "[*] Loading modules: init (script) and init.bin (binary)"
+	@echo "[*] The script scanner will find #!init and execute file:/init.bin"
+	$(QEMU) $(QEMU_FLAGS) -kernel bzImage \
+		-initrd init,init.bin \
+		-m 256M -nographic
 
-.PHONY: all clean run run-disk run-with-init run-disk-with-fs run-nographic
+
+# Run with demo script from ks/ folder
+run-with-demo-script: bzImage init.bin ks/demo.init
+	@echo "[*] Running kernel with demo script (ks/demo.init)..."
+	@echo "[*] Loading modules: ks/demo.init (script) and init.bin (binary)"
+	$(QEMU) $(QEMU_FLAGS) -kernel bzImage \
+		-initrd ks/demo.init,init.bin \
+		-nographic -m 256M
+
+.PHONY: all clean run run-disk run-with-init run-disk-with-fs run-nographic run-with-script run-with-demo-script

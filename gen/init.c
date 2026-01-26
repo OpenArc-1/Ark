@@ -18,6 +18,8 @@
 #include "ark/sata.h"
 #include "ark/elf_loader.h"
 #include "ark/userspacebuf.h"
+#include "ark/script.h"
+#include "ark/time.h"
 #include "../mp/built-in.h"
 
 extern void show_sysinfo_bios(void);
@@ -77,6 +79,10 @@ static void wait_for_init_bin(void) {
 }
 
 void kernel_main(void) {
+    printk("[    0.000000][boot] Ark kernel booting on x86\n");
+    busy_delay(40000000);
+    u8 script_found = 0;  /* Track if script was found and executed */
+    
     fb_init(&g_fb_info);
     serial_init();
     clear_screen();
@@ -85,10 +91,7 @@ void kernel_main(void) {
     /* Initialize IDT for int 0x80 syscalls */
     idt_init();
     
-    printk("\n");
-    printk("[    0.000000] ========================================\n");
-    printk("[    0.000000] Ark kernel booting on x86\n");
-    printk("[    0.000000] ========================================\n");
+    
     printk("[    0.000001] Boot params: stub (no cmdline yet)\n");
     printk("[    0.000010] Framebuffer: initialized\n");
     printk("[    0.000020] Serial console: initialized\n");
@@ -103,9 +106,15 @@ void kernel_main(void) {
     printk("[    0.000125] Initializing BIOS subsystem...\n");
     show_sysinfo_bios();
     busy_delay(20000000);
+    printk("[time] ");
+    rtc_time_t t = read_rtc();
+    printk("%02d:%02d:%02d\n", t.hour, t.min, t.sec);
+    busy_delay(20000000);
     /* USB subsystem */
     printk("[    0.000130] Initializing USB subsystem...\n");
     usb_init();
+    busy_delay(20000000);
+    scan_usb_controllers();
     printk("[    0.000140] USB subsystem: OK\n");
     busy_delay(20000000);
     
@@ -139,7 +148,20 @@ void kernel_main(void) {
     ramfs_list_files();
     busy_delay(20000000);
 
-    /* Probe for init binary */
+    /* Scan for #!init scripts first (new script-based init system) */
+    printk("[    0.000250] Scanning for #!init scripts in ramfs...\n");
+    script_found = script_scan_and_execute();
+    busy_delay(20000000);
+    
+    if (script_found) {
+        printk("[    0.000260] Init script executed successfully\n");
+        /* Script execution completed, continue to normal flow or halt */
+        goto script_done;
+    } else {
+        printk("[    0.000260] No #!init scripts found, falling back to /init.bin\n");
+    }
+
+    /* Probe for init binary (fallback to traditional method) */
     printk("[    0.000300] Probing for /init.bin in ramfs\n");
     wait_for_init_bin();
 
@@ -204,30 +226,39 @@ void kernel_main(void) {
         }
     }
     
+script_done:
     /* If we reach here, init.bin either:
      * 1. Was not found
      * 2. Was not executable 
      * 3. Returned/exited
-     * Either way, this is a system failure condition
+     * 4. Or a script was executed successfully
+     * Either way, this is a system failure condition (unless script succeeded)
      */
-    printk("\n");
-    printk("[    1.000000] ============================================\n");
-    printk("[    1.000000]      KERNEL PANIC - INIT FAILURE\n");
-    printk("[    1.000000] ============================================\n");
-    
-    if (fs_has_init()) {
-        printk("[    1.100000] init.bin was found but execution failed\n");
-        printk("[    1.100000] OR init.bin exited unexpectedly\n");
+    if (!script_found) {
+        printk("\n");
+        printk("[    1.000000] Kernel panic - init.bin execution failed or not loaded\n");
+        printk("[    1.000000] init.bin execution failed or not loaded\n");
+        
+        if (fs_has_init()) {
+            printk("[    1.100000] init.bin was found but execution failed\n");
+            printk("[    1.100000] OR init.bin exited unexpectedly\n");
+        } else {
+            printk("[    1.100000] init.bin was NOT loaded into ramfs\n");
+            printk("[    1.110000] Use: make run-with-init\n");
+            printk("[    1.110000] OR: make run-disk-with-fs\n");
+            printk("[    1.120000] OR: Load a script with #!init tag\n");
+        }
+        
+        printk("[    1.200000] System halting\n");
+        printk("[    1.300000] \n");
+        busy_delay(20000000);
+        kernel_panic("init.bin execution failed or not loaded");
     } else {
-        printk("[    1.100000] init.bin was NOT loaded into ramfs\n");
-        printk("[    1.110000] Use: make run-with-init\n");
-        printk("[    1.110000] OR: make run-disk-with-fs\n");
+        printk("\n");
+        printk("[    1.000000] Init script execution complete\n");
+        printk("[    1.100000] System will continue in idle loop\n");
+        busy_delay(20000000);
     }
-    
-    printk("[    1.200000] System halting...\n");
-    printk("[    1.300000] \n");
-    busy_delay(20000000);
-    kernel_panic("init.bin execution failed or not loaded");
 }
 
 /* Filesystem implementation using ramfs for loading init.bin */

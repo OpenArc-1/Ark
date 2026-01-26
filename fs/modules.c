@@ -4,8 +4,8 @@
  * Reads modules from multiboot info and registers them into ramfs.
  */
 
-#include "modules.h"
-#include "ramfs.h"
+#include "ark/modules.h"
+#include "ark/ramfs.h"
 #include "ark/printk.h"
 
 /**

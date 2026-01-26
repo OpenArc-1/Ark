@@ -21,8 +21,8 @@ static void fb_draw_cell(u32 x, u32 y, u32 argb) {
         return;
     }
 
-    const u32 char_w = 6;
-    const u32 char_h = 8;
+    const u32 char_w = 4;  // Reduced from 6 for smaller text
+    const u32 char_h = 6;  // Reduced from 8 for smaller text
     u32 px = x * char_w;
     u32 py = y * char_h;
 
@@ -67,7 +67,7 @@ void fb_clear(void) {
 }
 
 static void fb_scroll(void) {
-    const u32 char_h = 8;
+    const u32 char_h = 6;  // Updated from 8 to match new font height
     const u32 rows = fb_info.height / char_h;
 
     if (!fb_info.addr || rows == 0) {
@@ -99,8 +99,8 @@ static void fb_scroll(void) {
 }
 
 void fb_putc(char c) {
-    const u32 char_w = 6;
-    const u32 char_h = 8;
+    const u32 char_w = 4;  // Updated from 6 for smaller text
+    const u32 char_h = 6;  // Updated from 8 for smaller text
     const u32 cols = fb_info.width / char_w;
     const u32 rows = fb_info.height / char_h;
 
@@ -116,7 +116,7 @@ void fb_putc(char c) {
     } else if (c == '\t') {
         cursor_x = (cursor_x + 4) & ~3U;
     } else {
-        fb_draw_cell(cursor_x, cursor_y, 0xFFFFFFFF); /* white block */
+        fb_draw_cell(cursor_x, cursor_y, 0xAAAAAAAA); /* light gray instead of white */
         cursor_x++;
     }
 

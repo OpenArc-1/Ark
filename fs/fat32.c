@@ -4,10 +4,10 @@
  * Provides basic FAT32 filesystem support for reading files from disk.
  */
 
-#include "fat32.h"
+#include "ark/fat32.h"
 #include "ark/printk.h"
-#include "../mem/mmio.h"
-#include "../gen/pci.h"
+#include "ark/mmio.h"
+#include "ark/pci.h"
 
 /* FAT32 Boot Sector Structure (simplified) */
 typedef struct {

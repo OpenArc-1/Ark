@@ -4,10 +4,10 @@
  * Implements Serial ATA (AHCI) hard drive and SSD access.
  */
 
-#include "sata.h"
+#include "ark/sata.h"
 #include "ark/printk.h"
-#include "../gen/pci.h"
-#include "../mem/mmio.h"
+#include "ark/pci.h"
+#include "ark/mmio.h"
 
 /* AHCI Controller Registers */
 #define AHCI_CAP          0x00

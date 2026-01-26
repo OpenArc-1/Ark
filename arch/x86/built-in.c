@@ -17,7 +17,7 @@ static const unsigned int multiboot_header[] = {
 #include "ark/printk.h"
 #include "ark/panic.h"
 #include "ark/fb.h"
-#include "../fs/modules.h"
+#include "ark/modules.h"
 
 void kernel_main(void);
 
@@ -28,7 +28,7 @@ ark_fb_info_t g_fb_info;
  * EAX/EBX per spec before jumping here, but we currently ignore them
  * and just run the generic kernel main.
  */
-void _start(void) {
+void start(void) {
     kernel_main();
     /* If kernel_main ever returns, halt the CPU. */
     for (;;) {

@@ -4,7 +4,7 @@
  * Provides a simple in-memory filesystem for storing and retrieving files.
  */
 
-#include "ramfs.h"
+#include "ark/ramfs.h"
 #include "ark/printk.h"
 #include "ark/types.h"
 

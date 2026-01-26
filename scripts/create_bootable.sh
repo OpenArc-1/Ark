@@ -5,8 +5,8 @@
 set -e
 
 KERNEL_FILE="${1:-../bzImage}"
-OUTPUT_IMAGE="${2:-ark.img}"
-SIZE_MB="${3:-256}"
+OUTPUT_IMAGE="${2:-image.iso}"
+SIZE_MB="${3:-25}"
 
 if [ ! -f "$KERNEL_FILE" ]; then
     echo "Error: Kernel file not found: $KERNEL_FILE"

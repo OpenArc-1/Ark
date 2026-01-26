@@ -4,11 +4,11 @@
  * This module initializes all storage and filesystem drivers as a unified subsystem.
  */
 
-#include "ata.h"
-#include "sata.h"
-#include "ramfs.h"
-#include "fat32.h"
-#include "vfs.h"
+#include "ark/ata.h"
+#include "ark/sata.h"
+#include "ark/ramfs.h"
+#include "ark/fat32.h"
+#include "ark/vfs.h"
 #include "ark/printk.h"
 
 extern void ata_init(void);

@@ -4,7 +4,7 @@
  * Implements IDE hard drive access for legacy systems.
  */
 
-#include "ata.h"
+#include "ark/ata.h"
 #include "ark/printk.h"
 #include "../io/built-in.h"
 

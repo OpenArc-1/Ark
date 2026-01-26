@@ -2,9 +2,9 @@
  * Virtual Filesystem Layer Implementation
  */
 
-#include "vfs.h"
-#include "ramfs.h"
-#include "fat32.h"
+#include "ark/vfs.h"
+#include "ark/ramfs.h"
+#include "ark/fat32.h"
 #include "ark/printk.h"
 
 /* Helper string functions */

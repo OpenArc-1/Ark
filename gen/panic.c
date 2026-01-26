@@ -6,8 +6,8 @@
 #include "ark/printk.h"
 #include "ark/panic.h"
 #include "init.h"
-#include "pci.h" //new mod created by yahya mokhlis
-#include "input.h"
+#include "ark/pci.h" //new mod created by yahya mokhlis
+#include "ark/input.h"
 
 static void busy_delay(u32 loops) {
     for (volatile u32 i = 0; i < loops; ++i) {

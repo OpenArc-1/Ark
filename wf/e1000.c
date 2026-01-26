@@ -1,8 +1,8 @@
 // e1000.c
 #include <stdint.h>
-#include "../mem/mmio.h"
-#include "../gen/pci.h"
-#include "../mem/mem.h"
+#include "ark/mmio.h"
+#include "ark/pci.h"
+#include "ark/mem.h"
 #include "ark/printk.h"
 
 #define RX_DESC_COUNT 32

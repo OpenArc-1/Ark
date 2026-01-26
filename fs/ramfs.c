@@ -31,6 +31,16 @@ void ramfs_init(void) {
 }
 
 /**
+ * Prepare ramfs for use (called before loading modules)
+ * Does NOT clear existing files - just marks as ready
+ */
+void ramfs_prepare(void) {
+    /* Ensure the file table is ready without clearing */
+    g_ramfs_mounted = 0;
+    printk("[ramfs] Prepared for module loading\n");
+}
+
+/**
  * Mount ramfs as the root filesystem
  */
 void ramfs_mount(void) {
@@ -125,6 +135,20 @@ u8 *ramfs_get_file(const char *filename, u32 *out_size) {
     }
     
     return NULL;
+}
+
+/**
+ * List all files in ramfs (for debugging)
+ */
+void ramfs_list_files(void) {
+    printk("[ramfs] Files in ramfs (%u total):\n", g_ramfs_file_count);
+    for (u32 i = 0; i < g_ramfs_file_count; ++i) {
+        if (g_ramfs_files[i].valid) {
+            printk("[ramfs]   - %s (%u bytes)\n", 
+                   g_ramfs_files[i].filename, 
+                   g_ramfs_files[i].size);
+        }
+    }
 }
 
 /**

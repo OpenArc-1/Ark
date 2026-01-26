@@ -18,6 +18,7 @@ static const unsigned int multiboot_header[] = {
 #include "ark/panic.h"
 #include "ark/fb.h"
 #include "ark/modules.h"
+#include "ark/ramfs.h"
 
 void kernel_main(void);
 
@@ -62,6 +63,9 @@ void arch_x86_entry(u32 magic, u32 mb_info) {
            (unsigned)mbi->framebuffer_addr,
            (unsigned)mbi->framebuffer_bpp,
            (unsigned)mbi->framebuffer_pitch);
+
+    /* Prepare ramfs before loading modules */
+    ramfs_prepare();
 
     /* Load any modules provided by the bootloader */
     modules_load_from_multiboot(mbi);

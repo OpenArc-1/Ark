@@ -29,3 +29,6 @@ stack_bottom:
     .skip 16384           /* 16 KiB stack */
 stack_top:
 
+    /* Mark stack as non-executable */
+    .section .note.GNU-stack,"",@progbits
+

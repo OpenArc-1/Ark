@@ -35,6 +35,12 @@ typedef struct {
 void ramfs_init(void);
 
 /**
+ * Prepare ramfs for use (e.g., before loading modules)
+ * Does NOT clear existing files
+ */
+void ramfs_prepare(void);
+
+/**
  * Mount the ramfs as root filesystem
  */
 void ramfs_mount(void);
@@ -62,6 +68,11 @@ u8 ramfs_file_exists(const char *filename);
  * @return Pointer to file data, or NULL if not found
  */
 u8 *ramfs_get_file(const char *filename, u32 *out_size);
+
+/**
+ * List all files in ramfs (for debugging)
+ */
+void ramfs_list_files(void);
 
 /**
  * Check if init.bin exists in ramfs

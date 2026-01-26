@@ -1,83 +1,71 @@
 #!/bin/bash
-
-# Helper script to generate bootable Ark OS images with GRUB2
+# pack-init.sh - Create bootable Ark OS disk with init.bin included
 
 set -e
 
-KERNEL_FILE="${1:-../bzImage}"
-OUTPUT_IMAGE="${2:-image.iso}"
-SIZE_MB="${3:-25}"
+KERNEL="/mnt/c/Users/adnan/Desktop/Ark-main/bzImage"
+INITBIN="/mnt/c/Users/adnan/Desktop/Ark-main/init.bin"
+OUTPUT="ark.img"
+SIZE_MB=256
 
-if [ ! -f "$KERNEL_FILE" ]; then
-    echo "Error: Kernel file not found: $KERNEL_FILE"
+# Check files exist
+if [ ! -f "$KERNEL" ]; then
+    echo "Error: $KERNEL not found"
     exit 1
 fi
 
-echo "[*] Creating $SIZE_MB MB bootable image..."
+if [ ! -f "$INITBIN" ]; then
+    echo "Error: $INITBIN not found"
+    exit 1
+fi
 
-# Create disk image
-dd if=/dev/zero of="$OUTPUT_IMAGE" bs=1M count=$SIZE_MB 2>/dev/null
+echo "[*] Creating $SIZE_MB MB bootable disk image..."
+dd if=/dev/zero of="$OUTPUT" bs=1M count=$SIZE_MB status=none
 
-echo "[*] Installing GRUB2..."
-
-# Create temporary mount point
-TMPDIR=$(mktemp -d)
-trap "rm -rf $TMPDIR" EXIT
-
-# Setup loop device (requires root)
+# Setup loop device
 LOOPDEV=$(sudo losetup -f)
-sudo losetup -P "$LOOPDEV" "$OUTPUT_IMAGE"
+sudo losetup -P "$LOOPDEV" "$OUTPUT"
 
-# Create MBR partition table and FAT32 partition
-sudo parted -s "${LOOPDEV}" mklabel msdos
-sudo parted -s "${LOOPDEV}" mkpart primary fat32 1MiB 100%
-sudo parted -s "${LOOPDEV}" set 1 boot on
+# Create partition table and FAT32 partition
+sudo parted -s "$LOOPDEV" mklabel msdos
+sudo parted -s "$LOOPDEV" mkpart primary fat32 1MiB 100%
+sudo parted -s "$LOOPDEV" set 1 boot on
 
-# Format as FAT32
-sudo mkfs.fat -F 32 "${LOOPDEV}p1" 2>/dev/null
+# Format FAT32
+sudo mkfs.fat -F32 "${LOOPDEV}p1" >/dev/null
 
 # Mount partition
-MOUNTPOINT="$TMPDIR/mnt"
-mkdir -p "$MOUNTPOINT"
+MOUNTPOINT=$(mktemp -d)
 sudo mount "${LOOPDEV}p1" "$MOUNTPOINT"
 
-# Create boot directories
+# Copy kernel and init.bin
+sudo cp "$KERNEL" "$MOUNTPOINT/bzImage"
+sudo cp "$INITBIN" "$MOUNTPOINT/init.bin"
+
+# Create GRUB config
 sudo mkdir -p "$MOUNTPOINT/boot/grub"
-sudo mkdir -p "$MOUNTPOINT/boot/modules"
-
-# Copy kernel
-sudo cp "$KERNEL_FILE" "$MOUNTPOINT/bzImage"
-
-# Create GRUB configuration
-cat > "$TMPDIR/grub.cfg" << 'EOF'
+cat << 'EOF' | sudo tee "$MOUNTPOINT/boot/grub/grub.cfg" >/dev/null
 set timeout=5
 set default=0
 
-menuentry 'Ark based demo bootable image' {
+menuentry "Ark OS with init.bin" {
     multiboot /bzImage
 }
 EOF
 
-sudo cp "$TMPDIR/grub.cfg" "$MOUNTPOINT/boot/grub/"
-
-# Install GRUB2 (requires grub-install)
-if command -v grub-install &> /dev/null; then
-    sudo grub-install --root-directory="$MOUNTPOINT" --boot-directory="$MOUNTPOINT/boot" "${LOOPDEV}" --target=i386-pc
+# Install GRUB2
+if command -v grub-install &>/dev/null; then
+    sudo grub-install --target=i386-pc --boot-directory="$MOUNTPOINT/boot" "$LOOPDEV"
     echo "[+] GRUB2 installed"
 else
-    echo "[!] Warning: grub-install not found, GRUB2 installation skipped"
-    echo "    Install with: sudo apt-get install grub2"
+    echo "[!] grub-install not found, GRUB2 not installed"
 fi
 
-# Unmount and cleanup
+# Cleanup
 sudo umount "$MOUNTPOINT"
 sudo losetup -d "$LOOPDEV"
+rm -rf "$MOUNTPOINT"
 
-echo "[+] Bootable disk image created: $OUTPUT_IMAGE"
-echo ""
-echo "To test with QEMU:"
-echo "  qemu-system-i386 -drive file=$OUTPUT_IMAGE,format=raw -m 256M"
-echo ""
-echo "To write to USB (WARNING: destructive):"
-echo "  sudo dd if=$OUTPUT_IMAGE of=/dev/sdX bs=4M status=progress"
-echo "  (Replace /dev/sdX with your USB device)"
+echo "[+] Bootable disk created: $OUTPUT"
+echo "To test:"
+echo "  qemu-system-i386 -drive file=$OUTPUT,format=raw -m 256M -serial stdio"

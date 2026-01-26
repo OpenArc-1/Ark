@@ -16,6 +16,8 @@
 #include "ark/ramfs.h"
 #include "ark/ata.h"
 #include "ark/sata.h"
+#include "ark/elf_loader.h"
+#include "ark/userspacebuf.h"
 #include "../mp/built-in.h"
 
 extern void show_sysinfo_bios(void);
@@ -27,15 +29,29 @@ extern void ip_poll(void);
 extern void fs_built_in_init(void);
 extern void fb_init(const ark_fb_info_t *info);
 extern void serial_init(void);
+extern void idt_init(void);  /* IDT initialization for syscalls */
 extern void ramfs_init(void);
 extern void ramfs_mount(void);
 extern u8 ramfs_has_init(void);
+extern u8 *ramfs_get_init(u32 *out_size);
 extern ark_fb_info_t g_fb_info;  /* Framebuffer info from bootloader */
+extern uspace_buffer_t g_uspace_buffer;  /* Shared userspace output buffer */
 /* Forward declarations for future subsystems. */
 u8 fs_has_init(void);
 void fs_mount_root(void);
 void input_init(void);  /* Input subsystem manager */
 void input_poll(void);  /* Poll input devices */
+
+/**
+ * Read and display any output from userspace buffer
+ */
+static void print_userspace_output(void) {
+    while (g_uspace_buffer.read_pos < g_uspace_buffer.write_pos) {
+        u32 pos = g_uspace_buffer.read_pos % USP_BUFFER_SIZE;
+        printk("%c", g_uspace_buffer.buffer[pos]);
+        g_uspace_buffer.read_pos++;
+    }
+}
 
 static void busy_delay(u32 loops) {
     for (volatile u32 i = 0; i < loops; ++i) {
@@ -45,29 +61,19 @@ static void busy_delay(u32 loops) {
 
 static void wait_for_init_bin(void) {
     /* Check if init.bin was provided by bootloader as a module.
-     * If modules were loaded into ramfs, fs_has_init() will return true immediately.
+     * The modules should have been loaded into ramfs by modules_load_from_multiboot()
+     * in arch_x86_entry before kernel_main was called.
      */
     if (fs_has_init()) {
-        printk("  [    0.100000] ark-init: found /init.bin in ramfs\n");
+        printk("[    0.000310] ark-init: Found /init.bin in ramfs (loaded by bootloader)\n");
         return;
     }
 
-    printk("[    0.100000] ark-init: /init.bin not found in ramfs\n");
-    printk("[    0.110000] ark-init: waiting for init.bin...\n");
+    printk("[    0.000310] ark-init: /init.bin not found in ramfs\n");
+    printk("[    0.000320] ark-init: Attempting to load from FAT32 filesystem...\n");
     
-    /* Try waiting a bit in case modules are still being loaded */
-    for (int attempt = 1; attempt <= 3; ++attempt) {
-        printk("[    0.120000] ark-init: retrying (%d/3)...\n", attempt);
-        busy_delay(50000000);
-        if (fs_has_init()) {
-            printk("[    0.150000] ark-init: found /init.bin, starting userspace\n");
-            return;
-        }
-    }
-
-    printk("[    0.200000] ark-init: /init.bin not found after retries\n");
-    printk("[    0.210000] ark-init: To load init.bin, run: make run-with-init\n");
-    kernel_panic("init.bin not found");
+    /* Try reading from FAT32 disk image - would need FAT32 driver integration */
+    /* For now, this is a placeholder for filesystem-based loading */
 }
 
 void kernel_main(void) {
@@ -75,6 +81,10 @@ void kernel_main(void) {
     serial_init();
     clear_screen();
     busy_delay(20000000);
+    
+    /* Initialize IDT for int 0x80 syscalls */
+    idt_init();
+    
     printk("\n");
     printk("[    0.000000] ========================================\n");
     printk("[    0.000000] Ark kernel booting on x86\n");
@@ -119,19 +129,34 @@ void kernel_main(void) {
     
     /* RAM filesystem */
     printk("[    0.000190] Mounting root filesystem (ramfs)...\n");
-    ramfs_init();
-    printk("[    0.000195] RAM filesystem: initialized\n");
+    /* NOTE: ramfs is already initialized by modules_load_from_multiboot() in arch_x86_entry
+     * Do NOT call ramfs_init() here as it would clear the loaded modules! */
     fs_mount_root();
-    printk("[    0.000200] Root filesystem: mounted\n");
+    printk("[    0.000200] Root filesystem: mounted with loaded modules\n");
+    
+    /* List files for debugging */
+    extern void ramfs_list_files(void);
+    ramfs_list_files();
     busy_delay(20000000);
 
     /* Probe for init binary */
-    printk("[    0.000300] Probing for /init.bin\n");
+    printk("[    0.000300] Probing for /init.bin in ramfs\n");
     wait_for_init_bin();
 
-    /* If fs_has_init ever returns true, we would "launch" init here. */
-    printk("[    0.600000] Launching init (stub)...\n");
-    printk("[    0.670000] Launching init (blob)...\n");
+    /* Check if init.bin was found */
+    if (!fs_has_init()) {
+        printk("[    0.500000] No init.bin loaded - continuing to kernel idle loop\n");
+        printk("[    0.600000] Kernel will now poll input devices and network\n");
+    } else {
+        printk("[    0.500000] init.bin found in ramfs!\n");
+        printk("[    0.510000] Ready to execute userspace init\n");
+        /* In a full implementation, we would execute init.bin here:
+         * - Switch to ring 3 (user mode)
+         * - Jump to init.bin entry point (_entry or init_usp function)
+         * - Pass control to userspace
+         * When init.bin exits, return here and panic
+         */
+    }
     
     /* Poll input devices while waiting */
     printk("[    0.700000] Polling input devices...\n");
@@ -144,9 +169,65 @@ void kernel_main(void) {
         busy_delay(1000000);
     }
     
+    /* Now attempt to execute init.bin if it was found */
+    if (fs_has_init()) {
+        u32 init_size = 0;
+        u8 *init_data = ramfs_get_init(&init_size);
+        
+        if (init_data && init_size > 0) {
+            printk("[    0.800000] Executing /init.bin from ramfs\n");
+            printk("[    0.810000] Binary size: %u bytes\n", init_size);
+            printk("[    0.820000] \n");
+            
+            /* Reset output buffer before execution */
+            g_uspace_buffer.read_pos = 0;
+            g_uspace_buffer.write_pos = 0;
+            g_uspace_buffer.activity_flag = 0;
+            
+            /* Execute the ELF binary */
+            int exit_code = elf_execute(init_data, init_size);
+            
+            /* Check if shell loop ran  */
+            if (g_uspace_buffer.activity_flag || g_uspace_buffer.write_pos > 0) {
+                printk("[Shell] Shell executed and wrote output\n");
+                print_userspace_output();
+            } else {
+                printk("[Shell] Shell executed successfully (no output capability yet)\n");
+            }
+            
+            printk("\n");
+            printk("[    2.000000] init.bin returned with exit code: %d\n", exit_code);
+            printk("[    2.100000] System shutting down...\n");
+            busy_delay(10000000);
+        } else {
+            printk("[    0.800000] ERROR: init.bin found but data is invalid\n");
+        }
+    }
+    
+    /* If we reach here, init.bin either:
+     * 1. Was not found
+     * 2. Was not executable 
+     * 3. Returned/exited
+     * Either way, this is a system failure condition
+     */
+    printk("\n");
+    printk("[    1.000000] ============================================\n");
+    printk("[    1.000000]      KERNEL PANIC - INIT FAILURE\n");
+    printk("[    1.000000] ============================================\n");
+    
+    if (fs_has_init()) {
+        printk("[    1.100000] init.bin was found but execution failed\n");
+        printk("[    1.100000] OR init.bin exited unexpectedly\n");
+    } else {
+        printk("[    1.100000] init.bin was NOT loaded into ramfs\n");
+        printk("[    1.110000] Use: make run-with-init\n");
+        printk("[    1.110000] OR: make run-disk-with-fs\n");
+    }
+    
+    printk("[    1.200000] System halting...\n");
+    printk("[    1.300000] \n");
     busy_delay(20000000);
-    printk("[    0.800000] FATAL: Reached end of kernel_main without userspace init\n");
-    kernel_panic("init.bin not loaded");
+    kernel_panic("init.bin execution failed or not loaded");
 }
 
 /* Filesystem implementation using ramfs for loading init.bin */

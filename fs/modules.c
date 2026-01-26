@@ -40,25 +40,50 @@ u32 modules_load_from_multiboot(multiboot_info_t *mbi) {
         u8 *data = (u8 *)(u32)start;
 
         /* Get module name from command line string */
-        const char *name = "/init.bin";  /* Default name */
+        char filename[256];
+        const char *cmdline = "";
+        
         if (mods[i].string) {
-            const char *cmdline = (const char *)(u32)mods[i].string;
-            /* Use first word of cmdline as the module name */
-            if (cmdline[0] == '/') {
-                name = cmdline;
-            } else {
-                /* Prepend / if not present */
-                name = cmdline;
+            cmdline = (const char *)(u32)mods[i].string;
+        }
+        
+        /* Create filename with leading slash */
+        if (cmdline[0] == '/') {
+            /* Already has leading slash */
+            int j = 0;
+            while (cmdline[j] && j < 255) {
+                filename[j] = cmdline[j];
+                j++;
             }
+            filename[j] = '\0';
+        } else if (cmdline[0] != '\0') {
+            /* Prepend slash */
+            filename[0] = '/';
+            int j = 0;
+            while (cmdline[j] && j < 254) {
+                filename[j + 1] = cmdline[j];
+                j++;
+            }
+            filename[j + 1] = '\0';
+        } else {
+            /* No name provided, use default */
+            int j = 0;
+            const char *default_name = "/init.bin";
+            while (default_name[j]) {
+                filename[j] = default_name[j];
+                j++;
+            }
+            filename[j] = '\0';
         }
 
         printk("[modules] Loading module %u: %s (%u bytes @ 0x%x)\n", 
-               i + 1, name, size, start);
+               i + 1, filename, size, start);
 
-        if (!ramfs_add_file(name, data, size)) {
-            printk("[modules] Failed to load module '%s' into ramfs\n", name);
+        if (!ramfs_add_file(filename, data, size)) {
+            printk("[modules] Failed to load module '%s' into ramfs\n", filename);
         } else {
             ++loaded;
+            printk("[modules] Successfully added '%s' to ramfs\n", filename);
         }
     }
 

@@ -57,7 +57,7 @@ static void ehci_scan_ports(ehci_controller_t *ctrl) {
     }
 }
 
-static void ehci_init(uint32_t bar0) {
+ void ehci_init(uint32_t bar0) {
     uint32_t base = bar0 & ~0xF;  // Mask off lower 4 bits for memory type
 
     if (!base) {

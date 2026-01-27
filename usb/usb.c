@@ -2,7 +2,7 @@
 #include "ark/pci.h"
 #include "ark/mmio.h"   // our phys → virt mapper
 #include "ark/printk.h"
-
+#include "ehci.h"
 void usb_init() {
     printk("USB: Initializing USB subsystem...\n");
 
@@ -79,4 +79,5 @@ void usb_init() {
                controller_found, retry, devices_detected);
     }
 }
+
 

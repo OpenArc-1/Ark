@@ -2,6 +2,7 @@
 
 A lightweight, modular x86/x86_64 kernel designed for embedded systems, IoT devices, and low-memory environments. Ark prioritizes user experience and system efficiency over heavyweight features.
 
+
 ## Latest Features
 
 ### Storage & Filesystems (NEW)

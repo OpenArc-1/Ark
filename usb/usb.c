@@ -1,8 +1,49 @@
 #include "ark/usb.h"
 #include "ark/pci.h"
-#include "ark/mmio.h"   // our phys → virt mapper
+#include "ark/mmio.h"
 #include "ark/printk.h"
 #include "ehci.h"
+#include <stdint.h>
+
+#define PCI_CLASS_SERIAL 0x0C
+#define PCI_SUBCLASS_USB 0x03
+#define PCI_PROGIF_EHCI  0x20
+#define EHCI_REG_SIZE 0x1000
+
+typedef volatile uint32_t vuint32_t;
+
+
+typedef struct {
+    uint8_t caplength;      
+    uint8_t reserved;       
+    uint16_t hciversion;    
+    uint32_t hcsparams;     
+    uint32_t hccparams;     
+    uint32_t hcspportroute; 
+} ehci_cap_regs_t;
+
+typedef struct {
+    vuint32_t usbcmd;       
+    vuint32_t usbsts;       
+    vuint32_t usbintr;      
+    vuint32_t frindex;      
+    vuint32_t ctrldssegment;
+    vuint32_t periodiclistbase; 
+    vuint32_t asynclistaddr;
+    uint32_t  reserved[9];  
+    vuint32_t configflag;   
+    vuint32_t portsc[8];    
+} ehci_op_regs_t;
+
+typedef struct {
+    ehci_cap_regs_t *cap;
+    ehci_op_regs_t  *op;
+    int port_count;
+} ehci_controller_t;
+
+static ehci_controller_t ehci_ctrlr = {0};
+
+
 void usb_init() {
     printk("USB: Initializing USB subsystem...\n");
 

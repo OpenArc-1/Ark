@@ -198,3 +198,28 @@ u32 vfs_file_size(int fd) {
 u8 vfs_file_exists(const char *path) {
     return ramfs_file_exists(path) || (fat32_open(path) >= 0);
 }
+<<<<<<< HEAD
+=======
+
+static u8 vfs_path_is_root(const char *path) {
+    return path && path[0] == '/' && path[1] == '\0';
+}
+
+u32 vfs_list_count(const char *path) {
+    if (!vfs_path_is_root(path))
+        return 0;
+    return ramfs_get_file_count();
+}
+
+u8 vfs_list_at(const char *path, u32 index, char *name_out, u32 name_max) {
+    if (!vfs_path_is_root(path) || !name_out || name_max == 0)
+        return 0;
+    char tmp[RAMFS_MAX_FILENAME];
+    u8 *data = NULL;
+    u32 size = 0;
+    if (!ramfs_get_file_by_index(index, tmp, &data, &size))
+        return 0;
+    vfs_strncpy(name_out, tmp, name_max);
+    return 1;
+}
+>>>>>>> 1a209df (Removed unnecessary userspace files and added current project)

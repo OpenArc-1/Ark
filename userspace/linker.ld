@@ -1,36 +1,25 @@
-/* Userspace linker script for init.bin
- * Links userspace binaries at 0x1000 (text) and 0x2000 (data)
- * as specified in the Makefile
- */
-
 ENTRY(_start)
 
 SECTIONS
 {
-  /* Text section at 0x1000 */
+  /* Load low; kernel ELF loader copies segments to paddr */
   . = 0x1000;
-  
-  .text :
-  {
+
+  .text : ALIGN(16) {
     *(.text*)
   }
-  
-  /* Data section at 0x2000 */
-  . = 0x2000;
-  
-  .rodata :
-  {
+
+  .rodata : ALIGN(16) {
     *(.rodata*)
   }
-  
-  .data :
-  {
+
+  .data : ALIGN(16) {
     *(.data*)
   }
-  
-  .bss :
-  {
-    *(.bss*)
+
+  .bss : ALIGN(16) {
     *(COMMON)
+    *(.bss*)
   }
 }
+

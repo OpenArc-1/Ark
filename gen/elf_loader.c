@@ -5,6 +5,7 @@
 
 #include "ark/types.h"
 #include "ark/printk.h"
+ #include "ark/init_api.h"
 
 /* Busy loop for tiny delay */
 static void busy_delay(u32 loops) {
@@ -49,7 +50,7 @@ typedef struct {
 } elf_phdr_t;
 
 /* Load and execute ELF binary in memory */
-int elf_execute(u8 *binary, u32 size) {
+int elf_execute(u8 *binary, u32 size, const ark_kernel_api_t *api) {
     if (!binary || size < 4) {
         printk("[elf] Invalid binary or too small (%u bytes)\n", size);
         return -1;
@@ -61,9 +62,14 @@ int elf_execute(u8 *binary, u32 size) {
     if (elf->magic != ELF_MAGIC) {
         /* Treat as raw binary */
         printk("[elf] Raw binary, executing at 0x%x\n", (u32)binary);
-        typedef void (*entry_func_t)(void);
-        entry_func_t entry_func = (entry_func_t)binary;
-        entry_func();
+        if (api) {
+            ark_init_entry_t entry_func = (ark_init_entry_t)binary;
+            return entry_func(api);
+        } else {
+            typedef void (*entry_func_t)(void);
+            entry_func_t entry_func = (entry_func_t)binary;
+            entry_func();
+        }
         return 0;
     }
 
@@ -83,9 +89,14 @@ int elf_execute(u8 *binary, u32 size) {
     /* Execute entry point */
     printk("[elf] Jumping to entry 0x%x\n", elf->entry);
     busy_delay(100000);
-    typedef void (*entry_func_t)(void);
-    entry_func_t entry_func = (entry_func_t)elf->entry;
-    entry_func();
+    if (api) {
+        ark_init_entry_t entry_func = (ark_init_entry_t)elf->entry;
+        return entry_func(api);
+    } else {
+        typedef void (*entry_func_t)(void);
+        entry_func_t entry_func = (entry_func_t)elf->entry;
+        entry_func();
+    }
 
     return 0;
 }

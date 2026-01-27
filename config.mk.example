@@ -1,0 +1,28 @@
+# Ark build overrides — copy to config.mk and edit.
+# config.mk is optional and gitignored; use it for local toggles.
+
+# Debug build
+DEBUG       = 1
+# OPT       = 0
+
+# Strict warnings
+# WERROR    = 1
+
+# Skip init.bin
+# BUILD_INIT = 0
+
+# QEMU
+QEMU_RAM_MB   = 512
+QEMU_NOGRAPHIC = 1
+# QEMU_NET   = 0
+# QEMU_USB   = 0
+# QEMU_SMP   = 2
+# QEMU_EXTRA = -serial mon:stdio
+
+# Disk
+# DISK_SIZE_MB = 128
+# DISK_IMAGE   = my-disk.img
+
+# Tools (e.g. cross-compile)
+# CC = i686-elf-gcc
+# LD = i686-elf-ld

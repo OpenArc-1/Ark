@@ -18,7 +18,10 @@ static const unsigned int multiboot_header[] = {
 #include "ark/panic.h"
 #include "ark/fb.h"
 #include "ark/modules.h"
+<<<<<<< HEAD
+=======
 #include "ark/ramfs.h"
+>>>>>>> 1a209df (Removed unnecessary userspace files and added current project)
 
 void kernel_main(void);
 
@@ -64,9 +67,12 @@ void arch_x86_entry(u32 magic, u32 mb_info) {
            (unsigned)mbi->framebuffer_bpp,
            (unsigned)mbi->framebuffer_pitch);
 
+<<<<<<< HEAD
+=======
     /* Prepare ramfs before loading modules */
     ramfs_prepare();
 
+>>>>>>> 1a209df (Removed unnecessary userspace files and added current project)
     /* Load any modules provided by the bootloader */
     modules_load_from_multiboot(mbi);
 

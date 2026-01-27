@@ -10,6 +10,7 @@
 #include "ark/ramfs.h"
 #include "ark/elf_loader.h"
 #include "ark/input.h"
+#include "ark/init_api.h"
 
 /* Forward declarations from keyboard driver (hid/kbd100.c) */
 void kbd_poll(void);
@@ -229,7 +230,7 @@ u8 script_scan_and_execute(void) {
                         
                         /* Execute the binary using the bin system loader */
                         printk("[script] Executing binary via elf_execute...\n");
-                        int exit_code = elf_execute(binary_data, binary_size);
+                        int exit_code = elf_execute(binary_data, binary_size, ark_kernel_api());
                         
                         printk("[script] Binary execution completed with exit code: %d\n", exit_code);
                         found_script = 1;

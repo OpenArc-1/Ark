@@ -150,7 +150,7 @@ We prioritize **user experience** and **system efficiency** over heavyweight fea
 
 ## Documentation
 
-See [FILESYSTEM.md](https://openarc-1.github.io/ark_docs/guides/FILE_SYSTEM_GUIDE/) for detailed filesystem architecture and API documentation.
+See [FILESYSTEM.md](FILESYSTEM.md) for detailed filesystem architecture and API documentation.
 
 ## License
 

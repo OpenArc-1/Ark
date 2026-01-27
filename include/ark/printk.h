@@ -7,20 +7,10 @@
  #pragma once
 
  #include "ark/types.h"
-<<<<<<< HEAD
-=======
- #include <stdarg.h>
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)
  #include <stdbool.h>
  
  /* Kernel printk function */
  int printk(const char *fmt, ...);
-<<<<<<< HEAD
-=======
-
- /* Varargs variant for wrappers (e.g. tty_debug) */
- int vprintk(const char *fmt, va_list ap);
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)
  
  /* Global flag: true = use serial (COM1), false = VGA */
  extern bool use_serial;

@@ -90,8 +90,6 @@ u32 vfs_file_size(int fd);
  */
 u8 vfs_file_exists(const char *path);
 
-<<<<<<< HEAD
-=======
 /**
  * List files at path (ramfs root "/" only).
  * @param path Must be "/"
@@ -109,5 +107,4 @@ u32 vfs_list_count(const char *path);
  */
 u8 vfs_list_at(const char *path, u32 index, char *name_out, u32 name_max);
 
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)
 #endif /* VFS_H */

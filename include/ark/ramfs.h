@@ -35,15 +35,12 @@ typedef struct {
 void ramfs_init(void);
 
 /**
-<<<<<<< HEAD
-=======
  * Prepare ramfs for use (e.g., before loading modules)
  * Does NOT clear existing files
  */
 void ramfs_prepare(void);
 
 /**
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)
  * Mount the ramfs as root filesystem
  */
 void ramfs_mount(void);
@@ -73,14 +70,11 @@ u8 ramfs_file_exists(const char *filename);
 u8 *ramfs_get_file(const char *filename, u32 *out_size);
 
 /**
-<<<<<<< HEAD
-=======
  * List all files in ramfs (for debugging)
  */
 void ramfs_list_files(void);
 
 /**
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)
  * Check if init.bin exists in ramfs
  * @return true if /init.bin exists, false otherwise
  */
@@ -92,8 +86,6 @@ u8 ramfs_has_init(void);
  * @return Pointer to init.bin data, or NULL if not found
  */
 u8 *ramfs_get_init(u32 *out_size);
-<<<<<<< HEAD
-=======
 
 /**
  * Get file count in ramfs
@@ -110,4 +102,3 @@ u32 ramfs_get_file_count(void);
  * @return 1 if file exists at index, 0 otherwise
  */
 u8 ramfs_get_file_by_index(u32 index, char *out_filename, u8 **out_data, u32 *out_size);
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)

@@ -198,8 +198,6 @@ u32 vfs_file_size(int fd) {
 u8 vfs_file_exists(const char *path) {
     return ramfs_file_exists(path) || (fat32_open(path) >= 0);
 }
-<<<<<<< HEAD
-=======
 
 static u8 vfs_path_is_root(const char *path) {
     return path && path[0] == '/' && path[1] == '\0';
@@ -222,4 +220,3 @@ u8 vfs_list_at(const char *path, u32 index, char *name_out, u32 name_max) {
     vfs_strncpy(name_out, tmp, name_max);
     return 1;
 }
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)

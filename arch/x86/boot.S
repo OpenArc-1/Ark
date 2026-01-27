@@ -29,9 +29,6 @@ stack_bottom:
     .skip 16384           /* 16 KiB stack */
 stack_top:
 
-<<<<<<< HEAD
-=======
     /* Mark stack as non-executable */
     .section .note.GNU-stack,"",@progbits
 
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)

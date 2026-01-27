@@ -1,73 +1,52 @@
-# Ark Kernel Build System (x86, 32-bit freestanding)
+# -------------------------------------------------------------------
+# Ark OS Build System (x86, 32-bit freestanding)
+# Minimal Linux-style output
+# -------------------------------------------------------------------
 
+# Tools
 ARCH        ?= x86
 CC          ?= gcc
-LD          := $(CC)
-OBJCOPY     ?= objcopy
-NASM        ?= nasm
-QEMU        ?= qemu-system-i386
-QEMU_FLAGS  ?= -m 256M
-
-CFLAGS      := -m32 -fno-pic -fno-pie -std=gnu99 -ffreestanding -O2 -Wall -Wextra -Iinclude
-LDFLAGS     := -m32 -nostdlib -no-pie
-
-# Source files
-#
-# Override any variable via:
-#   make VAR=value ...
-# or create config.mk (see "Configuration" below).
-
-# ------------------------------------------------------------------------------
-# Configuration — toggle everything here or in config.mk
-# ------------------------------------------------------------------------------
-
-# Tools (use ?= to allow env override)
-ARCH        ?= x86
-CC          ?= gcc
-LD          ?= ld
+LD          ?= gcc
 AS          ?= as
-OBJCOPY     ?= objcopy
 NASM        ?= nasm
+OBJCOPY     ?= objcopy
 QEMU        ?= qemu-system-i386
 PYTHON      ?= python3
 
-# Build type
-DEBUG       ?= 0          # 1 = -O0 -g, 0 = use OPT level
-OPT         ?= 2          # 0,1,2,s — optimization (ignored if DEBUG=1)
-WERROR      ?= 0          # 1 = -Werror
-EXTRA_CFLAGS  ?=          # extra C flags
-EXTRA_LDFLAGS ?=          # extra linker flags
+# Build options
+DEBUG       ?= 0
+OPT         ?= 2
+WERROR      ?= 0
+EXTRA_CFLAGS  ?=
+EXTRA_LDFLAGS ?=
 
-# Kernel include path
+# Kernel include
 KERNEL_INC  ?= include
 
-# init.bin userspace
-BUILD_INIT  ?= 1          # 1 = build init.bin, 0 = skip
-INIT_TEXT   ?= 0x1000     # init.bin .text load address
-INIT_DATA   ?= 0x2000     # init.bin .data load address
+# Userspace init
+BUILD_INIT  ?= 1
+INIT_TEXT   ?= 0x1000
+INIT_DATA   ?= 0x2000
 
 # QEMU
 QEMU_RAM_MB ?= 256
-QEMU_NOGRAPHIC ?= 0       # 1 = -nographic, 0 = graphical
-QEMU_NET    ?= 1          # 1 = -device e1000
-QEMU_USB    ?= 1          # 1 = -usb -device usb-kbd -device usb-mouse
-QEMU_SMP    ?= 1          # number of CPUs (1 = unset)
-QEMU_EXTRA  ?=            # extra QEMU args
+QEMU_NOGRAPHIC ?= 0
+QEMU_NET    ?= 1
+QEMU_USB    ?= 1
+QEMU_SMP    ?= 1
+QEMU_EXTRA  ?=
 
 # Disk images
 DISK_SIZE_MB    ?= 256
 DISK_IMAGE      ?= disk.img
 DISK_FS_IMAGE   ?= disk-with-fs.img
 
-# Init script (for run-with-demo-script)
+# Demo script
 DEMO_SCRIPT ?= ks/demo.init
 
-# Optional local overrides (create config.mk, never committed)
--include config.mk
-
-# ------------------------------------------------------------------------------
-# Derived: CFLAGS, LDFLAGS, QEMU_FLAGS
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------
+# Derived flags
+# -------------------------------------------------------------------
 
 ifeq ($(DEBUG),1)
   OPT_CFLAGS := -O0 -g
@@ -88,10 +67,12 @@ ifeq ($(WERROR),1)
   WARN_CFLAGS += -Werror
 endif
 
-CFLAGS := -m32 -fno-pic -fno-pie -std=gnu99 -ffreestanding $(OPT_CFLAGS) $(WARN_CFLAGS) -I$(KERNEL_INC) $(EXTRA_CFLAGS)
+CFLAGS := -m32 -fno-pic -fno-pie -std=gnu99 -ffreestanding \
+          $(OPT_CFLAGS) $(WARN_CFLAGS) -I$(KERNEL_INC) $(EXTRA_CFLAGS)
+
 LDFLAGS := -m32 -nostdlib -no-pie $(EXTRA_LDFLAGS)
 
-# QEMU base
+# QEMU base flags
 QEMU_FLAGS := -m $(QEMU_RAM_MB)M
 ifeq ($(QEMU_NOGRAPHIC),1)
   QEMU_FLAGS += -nographic
@@ -107,140 +88,98 @@ ifneq ($(QEMU_SMP),1)
 endif
 QEMU_FLAGS += $(QEMU_EXTRA)
 
-# ------------------------------------------------------------------------------
-# Sources and objects
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------
+# Sources
+# -------------------------------------------------------------------
 
-SRCS := \
-    $(wildcard gen/*.c) \
-    $(wildcard fb/*.c) \
-    $(wildcard fs/*.c) \
-    $(wildcard hid/*.c) \
-    $(wildcard io/*.c) \
-    $(wildcard ks/*.c) \
-    $(wildcard mem/*.c) \
-    $(wildcard mp/*.c) \
-    $(wildcard usb/*.c) \
-    $(wildcard wf/*.c) \
-    $(wildcard arch/$(ARCH)/*.c)
+SRCS := $(wildcard gen/*.c) \
+        $(wildcard fb/*.c) \
+        $(wildcard fs/*.c) \
+        $(wildcard hid/*.c) \
+        $(wildcard io/*.c) \
+        $(wildcard ks/*.c) \
+        $(wildcard mem/*.c) \
+        $(wildcard mp/*.c) \
+        $(wildcard usb/*.c) \
+        $(wildcard wf/*.c) \
+        $(wildcard arch/$(ARCH)/*.c)
 
-# Assembly files
 NASMSRCS := mp/bios.S
 GASSRCS  := $(wildcard arch/$(ARCH)/*.S)
-
-# Object files
-OBJS := $(SRCS:.c=.o)
-OBJS += $(NASMSRCS:.S=.o)
-OBJS += $(GASSRCS:.S=.o)
-
-# Default target
-all: bzImage
-
-# Link kernel
-bzImage: linker.ld $(OBJS)
-	$(LD) $(LDFLAGS) -T linker.ld -o $@ $(OBJS)
-
-# Compile C files
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Compile NASM files (16-bit BIOS helpers)
-mp/%.o: mp/%.S
-	$(NASM) -f elf32 $< -o $@
-
-# Compile GAS files
-arch/$(ARCH)/%.o: arch/$(ARCH)/%.S
-	$(AS) --32 -o $@ $<
-
-# Clean build
-clean:
-	rm -f $(OBJS) bzImage init.bin ark.img
-
-# Bootable disk image (optional)
-disk.img: bzImage
-	@scripts/create_bootable_image.py bzImage disk.img 256
-
-# QEMU targets
-run: bzImage
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage
-
-run-disk: disk.img
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=disk.img,format=raw -m 256M -device e1000 -usb -device usb-kbd -device usb-mouse
-
-run-nographic: bzImage
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -nographic -device e1000 -usb -device usb-kbd -device usb-mouse
-
-.PHONY: all clean run run-disk run-nographic
 USERSPACE_SRCS := $(wildcard userspace/*.c)
 USERSPACE_ASM  := $(wildcard userspace/*.S)
-NASMSRCS       := mp/bios.S
-GASSRCS        := $(wildcard arch/$(ARCH)/*.S)
 
-OBJS         := $(SRCS:.c=.o) $(NASMSRCS:.S=.o) $(GASSRCS:.S=.o)
+OBJS := $(SRCS:.c=.o) $(NASMSRCS:.S=.o) $(GASSRCS:.S=.o)
 USERSPACE_OBJS := $(USERSPACE_SRCS:.c=.o) $(USERSPACE_ASM:.S=.o)
 
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------
 # Targets
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------
 
-.PHONY: all clean help config \
-	run run-disk run-disk-with-fs run-nographic run-with-demo-script run-with-script \
-	bzImage init.bin disk.img disk-with-fs.img
+.PHONY: all clean run run-disk run-disk-with-fs run-nographic run-with-demo-script
 
 all: bzImage
 ifneq ($(BUILD_INIT),0)
 all: init.bin
 endif
 
-# Kernel
+# ------------------------
+# Kernel build
+# ------------------------
 bzImage: linker.ld $(OBJS)
+	@printf "  LD      %s\n" $@
 	$(CC) $(LDFLAGS) -T linker.ld -o $@ $(OBJS)
-	@echo "[+] Built bzImage"
 
-# Userspace init (optional)
+# ------------------------
+# Userspace init
+# ------------------------
 init.bin: userspace/linker.ld $(USERSPACE_OBJS)
-	$(LD) -m elf_i386 -Ttext=$(INIT_TEXT) -Tdata=$(INIT_DATA) -T userspace/linker.ld -o $@ $(USERSPACE_OBJS)
-	@echo "[+] Built init.bin"
+	@printf "  LD      %s\n" $@
+	$(CC) -m32 -nostdlib -nostartfiles -nodefaultlibs \
+	      -Ttext=$(INIT_TEXT) -Tdata=$(INIT_DATA) -T userspace/linker.ld \
+	      -o $@ $(USERSPACE_OBJS)
 
-# C
+# ------------------------
+# Compile C files
+# Compile C files
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@printf "  CC      %s\n" $@
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-# NASM
+# NASM assembly
 mp/%.o: mp/%.S
-	$(NASM) -f elf32 $< -o $@
+	@printf "  AS      %s\n" $@
+	@$(NASM) -f elf32 $< -o $@
 
-# GAS
+# GAS assembly
 arch/$(ARCH)/%.o: arch/$(ARCH)/%.S
-	$(AS) --32 -o $@ $<
+	@printf "  AS      %s\n" $@
+	@$(AS) --32 -o $@ $<
 
-# Userspace asm
 userspace/%.o: userspace/%.S
-	$(AS) --32 -o $@ $<
+	@printf "  AS      %s\n" $@
+	@$(AS) --32 -o $@ $<
 
-# ------------------------------------------------------------------------------
+# ------------------------
 # Clean
-# ------------------------------------------------------------------------------
-
+# ------------------------
 clean:
-	rm -f $(OBJS) $(USERSPACE_OBJS) bzImage init.bin $(DISK_IMAGE) $(DISK_FS_IMAGE) disk-with-init.img
+	rm -f $(OBJS) $(USERSPACE_OBJS) bzImage init.bin \
+	      $(DISK_IMAGE) $(DISK_FS_IMAGE) disk-with-init.img
 	@echo "[+] Cleaned"
 
-# ------------------------------------------------------------------------------
+# ------------------------
 # Disk images
-# ------------------------------------------------------------------------------
-
+# ------------------------
 disk.img: bzImage
 	@$(PYTHON) scripts/create_bootable_image.py bzImage $(DISK_IMAGE) $(DISK_SIZE_MB)
 
 disk-with-fs.img: bzImage init.bin
-	@echo "[*] Creating $(DISK_SIZE_MB)MB FAT32 disk: $(DISK_FS_IMAGE)"
 	@$(PYTHON) scripts/create_disk_with_init.py bzImage init.bin $(DISK_FS_IMAGE) $(DISK_SIZE_MB)
 
-# ------------------------------------------------------------------------------
-# QEMU run targets
-# ------------------------------------------------------------------------------
-
+# ------------------------
+# QEMU targets
+# ------------------------
 run: bzImage
 	$(QEMU) $(QEMU_FLAGS) -kernel bzImage
 
@@ -250,19 +189,13 @@ run-disk: bzImage $(DISK_IMAGE)
 run-disk-with-fs: bzImage $(DISK_FS_IMAGE)
 	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=$(DISK_FS_IMAGE),format=raw -initrd init.bin
 
-# Serial-only run (nographic + init.bin as module)
 run-nographic: bzImage init.bin
 	$(QEMU) $(QEMU_FLAGS) -nographic -kernel bzImage -initrd init.bin
 
-# Demo script + init.bin as multiboot modules
 run-with-demo-script: bzImage init.bin $(DEMO_SCRIPT)
 	@echo "[*] Running with demo script: $(DEMO_SCRIPT)"
 	$(QEMU) $(QEMU_FLAGS) -nographic -kernel bzImage -initrd "$(DEMO_SCRIPT),init.bin"
 
-# Script-based init (disk with init); ensure disk has init.bin
-run-with-script: bzImage init.bin $(DISK_IMAGE)
-	@echo "[*] Running with script init + disk"
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=$(DISK_IMAGE),format=raw
 
 # ------------------------------------------------------------------------------
 # Help and config dump

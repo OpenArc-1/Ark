@@ -31,8 +31,6 @@ void ramfs_init(void) {
 }
 
 /**
-<<<<<<< HEAD
-=======
  * Prepare ramfs for use (called before loading modules)
  * Does NOT clear existing files - just marks as ready
  */
@@ -43,7 +41,6 @@ void ramfs_prepare(void) {
 }
 
 /**
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)
  * Mount ramfs as the root filesystem
  */
 void ramfs_mount(void) {
@@ -141,8 +138,6 @@ u8 *ramfs_get_file(const char *filename, u32 *out_size) {
 }
 
 /**
-<<<<<<< HEAD
-=======
  * List all files in ramfs (for debugging)
  */
 void ramfs_list_files(void) {
@@ -157,7 +152,6 @@ void ramfs_list_files(void) {
 }
 
 /**
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)
  * Check if init.bin exists in ramfs
  */
 u8 ramfs_has_init(void) {
@@ -170,8 +164,6 @@ u8 ramfs_has_init(void) {
 u8 *ramfs_get_init(u32 *out_size) {
     return ramfs_get_file("/init.bin", out_size);
 }
-<<<<<<< HEAD
-=======
 
 /**
  * Get file count in ramfs
@@ -208,4 +200,3 @@ u8 ramfs_get_file_by_index(u32 index, char *out_filename, u8 **out_data, u32 *ou
     
     return 1;
 }
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)

@@ -40,27 +40,6 @@ u32 modules_load_from_multiboot(multiboot_info_t *mbi) {
         u8 *data = (u8 *)(u32)start;
 
         /* Get module name from command line string */
-<<<<<<< HEAD
-        const char *name = "/init.bin";  /* Default name */
-        if (mods[i].string) {
-            const char *cmdline = (const char *)(u32)mods[i].string;
-            /* Use first word of cmdline as the module name */
-            if (cmdline[0] == '/') {
-                name = cmdline;
-            } else {
-                /* Prepend / if not present */
-                name = cmdline;
-            }
-        }
-
-        printk("[modules] Loading module %u: %s (%u bytes @ 0x%x)\n", 
-               i + 1, name, size, start);
-
-        if (!ramfs_add_file(name, data, size)) {
-            printk("[modules] Failed to load module '%s' into ramfs\n", name);
-        } else {
-            ++loaded;
-=======
         char filename[256];
         const char *cmdline = "";
         
@@ -105,7 +84,6 @@ u32 modules_load_from_multiboot(multiboot_info_t *mbi) {
         } else {
             ++loaded;
             printk("[modules] Successfully added '%s' to ramfs\n", filename);
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)
         }
     }
 

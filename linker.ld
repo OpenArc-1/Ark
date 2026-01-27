@@ -32,9 +32,4 @@ SECTIONS
   }
 }
 
-PHDRS {
-  text PT_LOAD FLAGS(4);     /* R | X */
-  rodata PT_LOAD FLAGS(4);   /* R     */
-  data PT_LOAD FLAGS(6);     /* R | W */
-}
 

@@ -1,5 +1,4 @@
 # Ark Kernel Build System (x86, 32-bit freestanding)
-<<<<<<< HEAD
 
 ARCH        ?= x86
 CC          ?= gcc
@@ -13,7 +12,6 @@ CFLAGS      := -m32 -fno-pic -fno-pie -std=gnu99 -ffreestanding -O2 -Wall -Wextr
 LDFLAGS     := -m32 -nostdlib -no-pie
 
 # Source files
-=======
 #
 # Override any variable via:
 #   make VAR=value ...
@@ -113,7 +111,6 @@ QEMU_FLAGS += $(QEMU_EXTRA)
 # Sources and objects
 # ------------------------------------------------------------------------------
 
->>>>>>> 1a209df (Removed unnecessary userspace files and added current project)
 SRCS := \
     $(wildcard gen/*.c) \
     $(wildcard fb/*.c) \

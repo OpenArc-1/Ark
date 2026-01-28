@@ -23,10 +23,10 @@ EXTRA_LDFLAGS ?=
 # Kernel include
 KERNEL_INC  ?= include
 
-# Userspace init
-BUILD_INIT  ?= 1
-INIT_TEXT   ?= 0x1000
-INIT_DATA   ?= 0x2000
+# Userspace display server
+BUILD_INIT       ?= 1
+INIT_TEXT        ?= 0x1000
+INIT_DATA        ?= 0x2000
 
 # QEMU
 QEMU_RAM_MB ?= 256
@@ -106,8 +106,8 @@ SRCS := $(wildcard gen/*.c) \
 
 NASMSRCS := mp/bios.S
 GASSRCS  := $(wildcard arch/$(ARCH)/*.S)
-USERSPACE_SRCS := $(wildcard userspace/*.c)
-USERSPACE_ASM  := $(wildcard userspace/*.S)
+USERSPACE_SRCS := userspace/display_server.c
+USERSPACE_ASM  := userspace/display_server_entry.S
 
 OBJS := $(SRCS:.c=.o) $(NASMSRCS:.S=.o) $(GASSRCS:.S=.o)
 USERSPACE_OBJS := $(USERSPACE_SRCS:.c=.o) $(USERSPACE_ASM:.S=.o)
@@ -135,7 +135,7 @@ bzImage: linker.ld $(OBJS)
 # ------------------------
 init.bin: userspace/linker.ld $(USERSPACE_OBJS)
 	@printf "  LD      %s\n" $@
-	$(CC) -m32 -nostdlib -nostartfiles -nodefaultlibs \
+	$(CC) -m32 -nostdlib -nostartfiles \
 	      -Ttext=$(INIT_TEXT) -Tdata=$(INIT_DATA) -T userspace/linker.ld \
 	      -o $@ $(USERSPACE_OBJS)
 

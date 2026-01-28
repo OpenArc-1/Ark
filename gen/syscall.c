@@ -113,6 +113,23 @@ u32 syscall_dispatch(u32 number, u32 arg1, u32 arg2, u32 arg3) {
         case 60:  /* SYS_EXIT */
             return 0;  /* Stub */
         
+        case 4: {  /* SYS_GET_FRAMEBUFFER */
+            extern u32 *display_get_framebuffer(void);
+            u32 *fb = display_get_framebuffer();
+            return (u32)fb;  /* Return framebuffer address as 32-bit value */
+        }
+        
+        /* Graphics syscalls (10-19) - handled by display server in userspace */
+        case 10:  /* SYS_GFX_CREATE_WINDOW */
+        case 11:  /* SYS_GFX_DESTROY_WINDOW */
+        case 12:  /* SYS_GFX_DRAW_RECT */
+        case 13:  /* SYS_GFX_DRAW_TEXT */
+        case 14:  /* SYS_GFX_DRAW_LINE */
+        case 15:  /* SYS_GFX_CLEAR */
+        case 16:  /* SYS_GFX_PRESENT */
+            /* Display server will handle these internally */
+            return 0;
+        
         default:
             return -1;
     }

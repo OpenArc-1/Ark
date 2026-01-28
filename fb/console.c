@@ -99,8 +99,8 @@ static void fb_scroll(void) {
 }
 
 void fb_putc(char c) {
-    const u32 char_w = 4;  // Updated from 6 for smaller text
-    const u32 char_h = 6;  // Updated from 8 for smaller text
+    const u32 char_w = 4;  // Reduced from 6 for smaller text
+    const u32 char_h = 6;  // Reduced from 8 for smaller text
     const u32 cols = fb_info.width / char_w;
     const u32 rows = fb_info.height / char_h;
 

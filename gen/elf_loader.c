@@ -5,7 +5,7 @@
 
 #include "ark/types.h"
 #include "ark/printk.h"
- #include "ark/init_api.h"
+#include "ark/init_api.h"
 
 /* Busy loop for tiny delay */
 static void busy_delay(u32 loops) {

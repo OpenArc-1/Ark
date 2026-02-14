@@ -19,6 +19,7 @@ static const unsigned int multiboot_header[] = {
 #include "ark/fb.h"
 #include "ark/modules.h"
 #include "ark/ramfs.h"
+#include "hw/vendor.h"
 
 void kernel_main(void);
 
@@ -53,7 +54,7 @@ void arch_x86_entry(u32 magic, u32 mb_info) {
     }
 
     multiboot_info_t *mbi = (multiboot_info_t *)(u32)mb_info;
-
+    cpu_verify();
     arch_setup_framebuffer(mbi);
 
     printk("Ark kernel starting (x86, linear framebuffer)...\n");

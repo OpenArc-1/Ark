@@ -14,7 +14,7 @@
 #define COM1 0x3F8
 
 static inline void outb(u16 port, u8 val) {
-    __asm__ __volatile__("outb %0, %1" : : "a"(val), "Nd"(port));
+    __asm__ __volatile__("outb %0, %1" :: "a"(val), "Nd"(port));
 }
 
 static inline u8 inb(u16 port) {

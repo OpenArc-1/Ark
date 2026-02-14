@@ -4,8 +4,8 @@
  * This is architecture-agnostic high-level logic that is entered
  * from arch-specific code (e.g. arch_x86_64_entry).
  */
-
- #include "ark/types.h"
+#include "hw/vendor.h"//this is the new cpu vendor check
+#include "ark/types.h"
 #include "ark/printk.h"
 #include "ark/panic.h"
 #include "ark/clear.h"
@@ -23,7 +23,12 @@
 #include "ark/pci.h"
 #include "ark/init_api.h"
 #include "../mp/built-in.h"
+#include "ark/uid.h"
+#include "aud/ac97.h"
+#include "hw/ramcheck.h"
 
+extern void ac97_test();
+extern void ac97_init();// this is the new sound card
 extern void show_sysinfo_bios(void);
 extern void clear_screen(void);
 extern void usb_init(void);
@@ -46,7 +51,8 @@ void fs_mount_root(void);
 void input_init(void);  /* Input subsystem manager */
 void input_poll(void);  /* Poll input devices */
 void scanAll(void); /*this is for the pci devices*/
-
+void cpu_verify();//cpu check
+void mem_verify();//memory check
 /* Kernel API table is provided by gen/init_api.c */
 
 
@@ -73,42 +79,45 @@ static void wait_for_init_bin(void) {
      * in arch_x86_entry before kernel_main was called.
      */
     if (fs_has_init()) {
-        printk("[kernel] ark-init: Found /init.bin in ramfs (loaded by bootloader)\n");
+        printk(":: ark-init: Found /init.bin in ramfs (loaded by bootloader)\n");
         return;
     }
 
-    printk("[kernel] ark-init: /init.bin not found in ramfs\n");
-    printk("[kernel] ark-init: Attempting to load from FAT32 filesystem...\n");
+    printk(":: ark-init: /init.bin not found in ramfs\n");
+    printk(":: ark-init: Attempting to load from FAT32 filesystem...\n");
     
     /* Try reading from FAT32 disk image - would need FAT32 driver integration */
     /* For now, this is a placeholder for filesystem-based loading */
 }
 
 void kernel_main(void) {
-    printk("[kernel][boot] Ark kernel booting on x86\n");
+    clear_screen();
+    cpu_verify();
+    mem_verify();
+    printk("::[boot] Ark kernel booting on x86\n");
     busy_delay(40000000);
     u8 script_found = 0;  /* Track if script was found and executed */
     
     fb_init(&g_fb_info);
     serial_init();
-    clear_screen();
     busy_delay(20000000);
-    
+    sys_info(); 
     /* Initialize IDT for int 0x80 syscalls */
     idt_init();
     scanAll();
+    ac97_init();//init in kernel.no degug text fro now 
+    ac97_test();
+    printk(":: Boot params: stub (no cmdline yet)\n");
+    printk(":: Framebuffer: initialized\n");
+    printk(":: Serial console: initialized\n");
     
-    printk("[kernel] Boot params: stub (no cmdline yet)\n");
-    printk("[kernel] Framebuffer: initialized\n");
-    printk("[kernel] Serial console: initialized\n");
-    
-    printk("[kernel] Initialising core subsystems...\n");
+    printk(":: Initialising core subsystems...\n");
     /* Input subsystem */
-    printk("[kernel] Initializing input subsystem...\n");
+    printk(":: Initializing input subsystem...\n");
     input_init();
-    printk("[kernel] Input subsystem: OK\n");
+    printk(":: Input subsystem: OK\n");
     busy_delay(20000000);
-    printk("[kernel][bios] Initializing BIOS subsystem...\n");
+    printk("::[bios] Initializing BIOS subsystem...\n");
     show_sysinfo_bios();
     busy_delay(20000000);
     printk("[time] ");
@@ -116,7 +125,7 @@ void kernel_main(void) {
     printk("%02d:%02d:%02d\n", t.hour, t.min, t.sec);
     busy_delay(20000000);
     /* USB subsystem */
-    printk("[kernel][usb] Initializing USB subsystem...\n");
+    printk("::[usb] Initializing USB subsystem...\n");
     usb_init();
     busy_delay(20000000);
     scan_usb_controllers();
@@ -124,29 +133,29 @@ void kernel_main(void) {
     busy_delay(20000000);
     
     /* Network driver */
-    printk("[kernel][e1x] Probing network device (e1000)...\n");
+    printk("::[e1x] Probing network device (e1000)...\n");
     e1000_init();
-    printk("[+] Network driver: OK\n");
+    printk(" [+] Network driver: OK\n");
     busy_delay(20000000);
     
     /* IP stack */
-    printk("[kernel][ip] Initializing IP networking stack...\n");
+    printk("::[ip] Initializing IP networking stack...\n");
     ip_init();
-    printk("[+] IP networking: OK\n");
+    printk(" [+] IP networking: OK\n");
     busy_delay(20000000);
     
     /* Filesystem and storage */
-    printk("[kernel][sata/ata] Initializing storage drivers...\n");
+    printk("::[sata/ata] Initializing storage drivers...\n");
     fs_built_in_init();
-    printk("[+] Storage drivers: OK\n");
+    printk(" [+] Storage drivers: OK\n");
     busy_delay(20000000);
     
     /* RAM filesystem */
-    printk("[kernel][rootfs] Mounting root filesystem (ramfs)...\n");
+    printk("::[rootfs] Mounting root filesystem (ramfs)...\n");
     /* NOTE: ramfs is already initialized by modules_load_from_multiboot() in arch_x86_entry
      * Do NOT call ramfs_init() here as it would clear the loaded modules! */
     fs_mount_root();
-    printk("[+] Root filesystem: mounted with loaded modules\n");
+    printk(" [+] Root filesystem: mounted with loaded modules\n");
     
     /* List files for debugging */
     extern void ramfs_list_files(void);
@@ -163,19 +172,19 @@ void kernel_main(void) {
         /* Script execution completed, continue to normal flow or halt */
         goto script_done;
     } else {
-        printk("[+] No #!init scripts found, falling back to /init.bin\n");
+        printk(" [+] No #!init scripts found, falling back to /init\n");
     }
 
     /* Probe for init binary (fallback to traditional method) */
-    printk("[...] Probing for /init.bin in ramfs\n");
+    printk("[...] Probing for /init in ramfs\n");
     wait_for_init_bin();
 
     /* Check if init.bin was found */
     if (!fs_has_init()) {
-        printk("[!] No init.bin loaded - continuing to kernel idle loop\n");
-        printk("[!] Kernel will now poll input devices and network\n");
+        printk(" [!] No init loaded - continuing to kernel idle loop\n");
+        printk(" [!] Kernel will now poll input devices and network\n");
     } else {
-        printk("[+] init.bin found in ramfs!\n");
+        printk(" [+] init.bin found in ramfs!\n");
         printk("[ok] Ready to execute userspace init\n");
         /* In a full implementation, we would execute init.bin here:
          * - Switch to ring 3 (user mode)
@@ -186,11 +195,11 @@ void kernel_main(void) {
     }
     
     /* Poll input devices while waiting */
-    printk("[+] Polling input devices...\n");
+    printk(" [+] Polling input devices...\n");
     input_poll();
     
     /* Poll network for incoming packets */
-    printk("[-] Polling network for packets...\n");
+    printk(" [-] Polling network for packets...\n");
     for (int i = 0; i < 100; i++) {
         ip_poll();
         busy_delay(1000000);
@@ -202,8 +211,8 @@ void kernel_main(void) {
         u8 *init_data = ramfs_get_init(&init_size);
         
         if (init_data && init_size > 0) {
-            printk("[elf] Executing /init.bin from ramfs\n");
-            printk("[+] Binary size: %u bytes\n", init_size);
+            printk("[elf] Executing /init from ramfs\n");
+            printk(" [+] Binary size: %u bytes\n", init_size);
             printk("\n");
             
             /* Reset output buffer before execution */
@@ -224,7 +233,7 @@ void kernel_main(void) {
             
             printk("\n");
             printk("[userspace] init.bin returned with exit code: %d\n", exit_code);
-            printk("[kernel] System shutting down...\n");
+            printk(":: System shutting down...\n");
             busy_delay(10000000);
         } else {
             printk("[elf-read] ERROR: init.bin found but data is invalid\n");
@@ -241,21 +250,21 @@ script_done:
      */
     if (!script_found) {
         printk("\n");
-        printk("[kernel] Kernel panic - init.bin execution failed or not loaded\n");
-        printk("[init] init.bin execution failed or not loaded\n");
+        printk(":: Kernel panic - init execution failed or not loaded\n");
+        printk("[init] init execution failed or not loaded\n");
         
         if (fs_has_init()) {
-            printk("[elf-read] init.bin was found but execution failed\n");
+            printk("[elf-read] init was found but execution failed\n");
             printk("[elf-read] OR init.bin exited unexpectedly\n");
         } else {
-            printk("[elf-read] init.bin was NOT loaded into ramfs\n");
+            printk("[elf-read] init was NOT loaded into ramfs\n");
             printk("[elf-read] Use: make run-with-init\n");
             printk("[elf-read] OR: make run-disk-with-fs\n");
             printk("[elf-read] OR: Load a script with #!init tag\n");
         }
         
-        printk("[kernel] System halting\n");
-        printk("[kernel] \n");
+        printk(":: System halting\n");
+        printk(":: \n");
         busy_delay(20000000);
         kernel_panic("init.bin execution failed or not loaded");
     } else {
@@ -273,4 +282,11 @@ u8 fs_has_init(void) {
 
 void fs_mount_root(void) {
     ramfs_mount();
+}
+
+void sys_info(){
+	printk("kernel: %s\n", K_ID);
+	//printk();
+	printk("build: %s\n", BUILD);
+
 }

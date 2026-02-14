@@ -4,10 +4,10 @@
 set -e
 
 KERNEL="/mnt/c/Users/adnan/Desktop/Ark-main/bzImage"
-INITBIN="/mnt/c/Users/adnan/Desktop/Ark-main/init.bin"
+INITBIN="/mnt/c/Users/adnan/Desktop/Ark-main/init"
 INITSC="/mnt/c/Users/adnan/Desktop/Ark-main/init.init"
 OUTPUT="ark.img"
-SIZE_MB=256
+SIZE_MB=245
 
 # Check files exist
 if [ ! -f "$KERNEL" ]; then
@@ -52,7 +52,7 @@ set default=0
 
 menuentry "Ark OS with init.bin" {
     multiboot /bzImage
-    linux /init.bin
+    module /init
 }
 EOF
 

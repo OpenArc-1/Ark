@@ -49,7 +49,7 @@ static inline u8 inb(u16 port) {
 }
 
 static inline void outb(u16 port, u8 value) {
-    asm volatile("outb %b0, %w1" : : "a"(value), "Nd"(port));
+    asm volatile("outb %b0, %w1" :: "a"(value), "Nd"(port));
 }
 
 /* Add char to buffer */

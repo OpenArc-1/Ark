@@ -1,7 +1,7 @@
 /**
  * tty.c - TTY and session management
  *
- * Linux-like session IDs (tty0, tty1, ...) and dmesg-style debug output.
+ * Session IDs (tty0, tty1, ...) management stuff
  */
 
 #include "ark/tty.h"
@@ -75,10 +75,10 @@ void tty_debug(u32 sid, const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     tty_jiffies++;
-   // printk("[    %2u.%06u] tty%u: ",
-     //      (unsigned)(tty_jiffies / TTY_DEBUG_SCALE),
-       //   (unsigned)(tty_jiffies % TTY_DEBUG_SCALE),
-        //   (unsigned)sid);
+    printk("[    %2u.%06u] tty%u: ",
+           (unsigned)(tty_jiffies / TTY_DEBUG_SCALE),
+          (unsigned)(tty_jiffies % TTY_DEBUG_SCALE),
+           (unsigned)sid);
     vprintk(fmt, ap);
     printk("\n");
     va_end(ap);

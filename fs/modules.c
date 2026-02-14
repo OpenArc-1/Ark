@@ -68,7 +68,7 @@ u32 modules_load_from_multiboot(multiboot_info_t *mbi) {
         } else {
             /* No name provided, use default */
             int j = 0;
-            const char *default_name = "/init.bin";
+            const char *default_name = "/init";
             while (default_name[j]) {
                 filename[j] = default_name[j];
                 j++;

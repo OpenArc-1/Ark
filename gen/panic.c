@@ -18,35 +18,33 @@ static void busy_delay(u32 loops) {
 void kernel_panic(const char *msg) {
     __asm__ __volatile__("cli");  // Stop interrupts
     busy_delay(20000000);
-    printk("[kernel] Found something in ramfs.please renter the </TASK>\n");
+    printk(":: Found something in ramfs.please renter the </TASK>\n");
     busy_delay(20000000);
-    printk("[kernel] type </TASK> to run it\n");
+    printk(":: type </TASK> to run it\n");
     busy_delay(20000000);
     //char input_buffer[12];
    // printk("path(/usr/): ");
     //input_read(input_buffer, sizeof(input_buffer), false);
     //printk("%s: NOT FOUND!!!\n", input_buffer);
     printk("[PS/2][K:found ps/2] please recompile with the </task>");
-    printk("\n");
-    printk("                 K E R N E L   P A N I C           \n");
-    printk("[kernel] Fail to boot into any task to sync\n");
+    printk(":: Fail to boot into any task to sync\n");
 
-    printk("[kernel] A fatal kernel error has occurred.\n");
-    printk("[kernel] The system has been halted to prevent corruption.\n\n");
+    printk(":: A fatal kernel error has occurred.\n");
+    printk(":: The system has been halted to prevent corruption.\n\n");
 
     if (msg) {
-        printk("[kernel] Panic reason : %s\n", msg);
+        printk(":: Panic reason : %s\n", msg);
     } else {
-        printk("[kernel] Panic reason : Unknown fatal error\n");
+        printk(":: Panic reason : Unknown fatal error\n");
     }
 
-    printk("\n[kernel]System state  : HALTED\n");
-    printk("[kernel]Kernel mode   : Protected\n");
+    printk("\n::System state  : HALTED\n");
+    printk("::Kernel mode   : Protected\n");
 
-    printk("[help-daemon]\n");
-    printk("[help-daemon] If this problem persists, check drivers, memory,\n");
-    printk("[help-daemon] or recent kernel changes.\n");
-    printk("[help-daemon] restart the system\n");
+    printk("::\n");
+    printk(":: If this problem persists, check drivers, memory,\n");
+    printk(":: or recent kernel changes.\n");
+    printk(":: restart the system\n");
     for (;;) {
         __asm__ __volatile__("hlt");
     }

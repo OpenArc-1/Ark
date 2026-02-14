@@ -6,6 +6,7 @@
  */
 
 #include "ark/init_api.h"
+#include "ark/uid.h"
 
 #define LINE_MAX  256
 #define NAME_MAX  64
@@ -96,18 +97,24 @@ static void cmd_cat(u32 sid, char *args) {
     g_api->printk("\n");
     g_api->vfs_close(fd);
 }
+static void cmd_cfetch(u32 sid){
+	(void)sid;
+	g_api->printk("^__^\n");
+	g_api->printk("(- -)\n");
+	g_api->printk("----- >HAI!!\n");
+}
 
 static void cmd_echo(u32 sid, char *args) {
     (void)sid;
     if (args[0])
         g_api->printk("%s\n", args);
     else
-        g_api->printk("\n");
+        g_api->printk("Too few arguments echo {arg}\n");
 }
 
 static void cmd_clear(u32 sid) {
     (void)sid;
-    for (int i = 0; i < 32; i++)
+    for (int i = 0; i < 36; i++)
         g_api->printk("\n");
 }
 
@@ -119,6 +126,7 @@ static void cmd_help(u32 sid) {
     g_api->printk("  clear      scroll screen\n");
     g_api->printk("  help       this message\n");
     g_api->printk("  exit       exit shell\n");
+    g_api->printk("  cfetch     just a demo\n");
 }
 
 static int run_cmd(u32 sid, char *cmd, char *args) {
@@ -129,6 +137,7 @@ static int run_cmd(u32 sid, char *cmd, char *args) {
     if (str_eq(cmd, "echo")) { cmd_echo(sid, args); return 0; }
     if (str_eq(cmd, "clear")) { cmd_clear(sid);     return 0; }
     if (str_eq(cmd, "help")) { cmd_help(sid);       return 0; }
+    if (str_eq(cmd, "cfetch")) { cmd_cfetch(sid);   return 0; }
     g_api->tty_debug(sid, "unknown command: %s (try help)", cmd);
     return 0;
 }
@@ -153,7 +162,8 @@ int _start(const ark_kernel_api_t *api) {
     api->printk("test shell on %s. Type 'help' for commands.\n\n", ttyname);
 
     for (;;) {
-        api->printk("ark@ark01:~> ", ttyname);
+        api->printk(K_ID); //cus of printk lacking multiple char
+	api->printk("$ "); //two sperate lines for prompting 
         char line[LINE_MAX];
         api->input_read(line, sizeof(line), 0);
         trim(line);
@@ -165,7 +175,7 @@ int _start(const ark_kernel_api_t *api) {
             break;
     }
 
-    api->tty_debug(sid, "shell exit");
+    api->tty_debug(sid, "[INIT ENDED!!]");
     api->tty_free(sid);
     return 0;
 }

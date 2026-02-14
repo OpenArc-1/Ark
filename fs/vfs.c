@@ -46,7 +46,7 @@ static vfs_mount_t mounts[MAX_MOUNTS];
 static u32 mount_count = 0;
 
 void vfs_init(void) {
-    printk("[vfs] Virtual filesystem layer initializing...\n");
+    printk(":: Virtual filesystem layer initializing...\n");
     
     /* Initialize file table */
     for (u32 i = 0; i < MAX_OPEN_FILES; i++) {
@@ -55,16 +55,16 @@ void vfs_init(void) {
     
     mount_count = 0;
     
-    printk("[vfs] VFS ready\n");
+    printk(":: VFS ready\n");
 }
 
 int vfs_mount(const char *fs_type, const char *device, const char *mount_point) {
     if (mount_count >= MAX_MOUNTS) {
-        printk("[vfs] Error: Too many mounts\n");
+        printk(":: Error: Too many mounts\n");
         return -1;
     }
     
-    printk("[vfs] Mounting %s on %s (type: %s)\n", device, mount_point, fs_type);
+    printk(":: Mounting %s on %s (type: %s)\n", device, mount_point, fs_type);
     
     /* Store mount info */
     vfs_mount_t *mount = &mounts[mount_count];
@@ -83,7 +83,7 @@ int vfs_mount(const char *fs_type, const char *device, const char *mount_point) 
         return fat32_mount(device);
     }
     
-    printk("[vfs] Error: Unknown filesystem type %s\n", fs_type);
+    printk(":: Error: Unknown filesystem type %s\n", fs_type);
     return -1;
 }
 

@@ -51,7 +51,7 @@ void idt_init(void) {
            entry->offset_low, entry->offset_high, entry->selector, entry->type_attr);
     
     /* Load IDT */
-    __asm__ __volatile__("lidt %0" : : "m" (g_idt_desc));
+    __asm__ __volatile__("lidt %0" :: "m" (g_idt_desc));
     
     printk("[idt_init] IDT loaded, ready for int 0x80\n");
 }

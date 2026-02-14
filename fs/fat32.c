@@ -43,7 +43,7 @@ static u8 fat32_initialized = 0;
 /* static u32 fat32_data_lba = 0; */
 
 void fat32_init(void) {
-    printk("[    0.180000] FAT32: Initializing FAT32 filesystem...\n");
+    printk("[fat32::fs] FAT32: Initializing FAT32 filesystem...\n");
     
     /* For now, FAT32 is initialized but not actively mounted */
     /* Full implementation would:
@@ -54,7 +54,7 @@ void fat32_init(void) {
      */
     
     fat32_initialized = 1;
-    printk("[    0.185000] FAT32: Filesystem driver loaded\n");
+    printk("[:::] FAT32: Filesystem driver loaded\n");
 }
 
 int fat32_mount(const char *device) {

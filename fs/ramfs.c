@@ -27,7 +27,7 @@ void ramfs_init(void) {
         g_ramfs_files[i].filename[0] = '\0';
     }
     
-    printk("[ramfs] Initialized ramfs\n");
+    printk(":: Initialized ramfs\n");
 }
 
 /**
@@ -37,7 +37,7 @@ void ramfs_init(void) {
 void ramfs_prepare(void) {
     /* Ensure the file table is ready without clearing */
     g_ramfs_mounted = 0;
-    printk("[ramfs] Prepared for module loading\n");
+    printk(":: Prepared for module loading\n");
 }
 
 /**
@@ -45,12 +45,12 @@ void ramfs_prepare(void) {
  */
 void ramfs_mount(void) {
     if (g_ramfs_mounted) {
-        printk("[ramfs] Already mounted\n");
+        printk(":: Already mounted\n");
         return;
     }
     
     g_ramfs_mounted = true;
-    printk("[ramfs] Root filesystem mounted (%u files)\n", g_ramfs_file_count);
+    printk(":: Root filesystem mounted (%u files)\n", g_ramfs_file_count);
 }
 
 /**
@@ -72,18 +72,18 @@ static u8 streq(const char *a, const char *b) {
  */
 u8 ramfs_add_file(const char *filename, u8 *data, u32 size) {
     if (!filename || !data || size == 0) {
-        printk("[ramfs] Invalid parameters for add_file\n");
+        printk(":: Invalid parameters for add_file\n");
         return 0;
     }
     
     if (g_ramfs_file_count >= RAMFS_MAX_FILES) {
-        printk("[ramfs] File table full, cannot add '%s'\n", filename);
+        printk(":: File table full, cannot add '%s'\n", filename);
         return 0;
     }
     
     /* Check if file already exists */
     if (ramfs_file_exists(filename)) {
-        printk("[ramfs] File '%s' already exists\n", filename);
+        printk(":: File '%s' already exists\n", filename);
         return 0;
     }
     
@@ -103,7 +103,7 @@ u8 ramfs_add_file(const char *filename, u8 *data, u32 size) {
     
     ++g_ramfs_file_count;
     
-    printk("[ramfs] Added file '%s' (%u bytes)\n", filename, size);
+    printk(":: Added file '%s' (%u bytes)\n", filename, size);
     return 1;
 }
 
@@ -141,10 +141,10 @@ u8 *ramfs_get_file(const char *filename, u32 *out_size) {
  * List all files in ramfs (for debugging)
  */
 void ramfs_list_files(void) {
-    printk("[ramfs] Files in ramfs (%u total):\n", g_ramfs_file_count);
+    printk(":: Files in ramfs (%u total):\n", g_ramfs_file_count);
     for (u32 i = 0; i < g_ramfs_file_count; ++i) {
         if (g_ramfs_files[i].valid) {
-            printk("[ramfs]   - %s (%u bytes)\n", 
+            printk("::   - %s (%u bytes)\n", 
                    g_ramfs_files[i].filename, 
                    g_ramfs_files[i].size);
         }
@@ -152,17 +152,17 @@ void ramfs_list_files(void) {
 }
 
 /**
- * Check if init.bin exists in ramfs
+ * Check if init exists in ramfs
  */
 u8 ramfs_has_init(void) {
-    return ramfs_file_exists("/init.bin");
+    return ramfs_file_exists("/init");
 }
 
 /**
  * Get the init.bin data
  */
 u8 *ramfs_get_init(u32 *out_size) {
-    return ramfs_get_file("/init.bin", out_size);
+    return ramfs_get_file("/init", out_size);
 }
 
 /**

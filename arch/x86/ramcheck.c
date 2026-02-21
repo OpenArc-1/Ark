@@ -32,12 +32,12 @@ int check_minimum_ram() {
 }
 
 void mem_verify() {
-    printk(":: Checking for minimum 16MB RAM...\n");
+    printk(T,"Checking for minimum 16MB RAM...\n");
 
     if (!check_minimum_ram()) {
-        printk("ERROR: Less than 16MB of RAM detected.\n");
-        kernel_panic("Insufficent amount of ram please run with more ram\n");
+        printk(T,"ERROR: Less than 16MB of RAM detected.\n");
+        kernel_panic("Insufficient amount of ram please run with more ram\n");
     }
 
-    printk(":: RAM Check Passed. Proceeding...\n");
+    printk(T,"RAM Check Passed. Proceeding...\n");
 }

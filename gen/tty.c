@@ -19,14 +19,14 @@ u32 tty_alloc(void) {
         if (!tty_used[i]) {
             tty_used[i] = 1;
             tty_jiffies++;
-            printk("[    %2u.%06u] tty%u: session allocated (session id %u)\n",
+            printk(T,"tty%u: session allocated (session id %u)\n",
                    tty_jiffies / TTY_DEBUG_SCALE,
                    tty_jiffies % TTY_DEBUG_SCALE,
                    (unsigned)i, (unsigned)i);
             return i;
         }
     }
-    printk("[tty] no free session slot\n");
+    printk(T,"no free session slot\n");
     return (u32)-1;
 }
 
@@ -35,7 +35,7 @@ void tty_free(u32 sid) {
         return;
     tty_used[sid] = 0;
     tty_jiffies++;
-    printk("[    %2u.%06u] tty%u: session released\n",
+    printk(T,"tty%u: session released\n",
            tty_jiffies / TTY_DEBUG_SCALE,
            tty_jiffies % TTY_DEBUG_SCALE,
            (unsigned)sid);
@@ -75,7 +75,7 @@ void tty_debug(u32 sid, const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     tty_jiffies++;
-    printk("[    %2u.%06u] tty%u: ",
+    printk(T,"tty%u: ",
            (unsigned)(tty_jiffies / TTY_DEBUG_SCALE),
           (unsigned)(tty_jiffies % TTY_DEBUG_SCALE),
            (unsigned)sid);

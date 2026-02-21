@@ -1,26 +1,25 @@
 #include "ark/usb.h"
 #include "ark/pci.h"
-#include "ark/mmio.h"   // our phys → virt mapper
+#include "ark/mmio.h"
 #include "ark/printk.h"
 
 #define PCI_CLASS_SERIAL 0x0C
 #define PCI_SUBCLASS_USB 0x03
 #define PCI_PROGIF_EHCI  0x20
-#define EHCI_REG_SIZE 0x1000
+#define EHCI_REG_SIZE    0x1000
 
 typedef volatile uint32_t vuint32_t;
 
-// EHCI Capability Registers (at BAR0 base address)
+// --- Your Structs (Kept exactly as you had them) ---
 typedef struct {
-    uint8_t caplength;      // 0x00: Capability Registers Length
-    uint8_t reserved;       // 0x01: reserved
-    uint16_t hciversion;    // 0x02: Interface Version Number
-    uint32_t hcsparams;     // 0x04: Structural Parameters
-    uint32_t hccparams;     // 0x08: Capability Parameters
-    uint32_t hcspportroute; // 0x0C: Companion Port Route Description
+    uint8_t caplength;
+    uint8_t reserved;
+    uint16_t hciversion;
+    uint32_t hcsparams;
+    uint32_t hccparams;
+    uint32_t hcspportroute;
 } ehci_cap_regs_t;
 
-// EHCI Operational Registers (at BAR0 + caplength)
 typedef struct {
     vuint32_t usbcmd;       // 0x00
     vuint32_t usbsts;       // 0x04
@@ -38,138 +37,112 @@ typedef struct {
     ehci_cap_regs_t *cap;
     ehci_op_regs_t *op;
     int port_count;
+    bool is_running;
 } ehci_controller_t;
 
 static ehci_controller_t ehci_ctrlr = {0};
 
+// Mock delay function (replace with your kernel's actual sleep/delay)
+static void delay_ms(int ms) {
+    for (volatile int i = 0; i < ms * 10000; i++) { __asm__("pause"); }
+}
+
+// --- NEW: Port Reset and Speed Detection ---
 static void ehci_scan_ports(ehci_controller_t *ctrl) {
-    printk("EHCI: Scanning %d ports...\n", ctrl->port_count);
+    printk(T,"EHCI: Scanning %d ports...\n", ctrl->port_count);
 
     for (int i = 0; i < ctrl->port_count; i++) {
         uint32_t status = ctrl->op->portsc[i];
-        uint32_t connect_status = status & 0x01;  // Bit 0: Current Connect Status
-        uint32_t port_enabled = (status >> 2) & 0x01;  // Bit 2: Port Enabled/Disabled
+        
+        if (status & 0x01) { // Bit 0: Connected
+            printk(T,"EHCI: Device connected on port %d. Initiating reset...\n", i);
 
-        if (connect_status) {
-            printk("EHCI: Device connected on port %d (enabled: %d)\n", i, port_enabled);
+            // 1. Reset the port (Set bit 8)
+            ctrl->op->portsc[i] = (status & ~0x2A) | (1 << 8);
+            delay_ms(50); // USB spec requires at least 50ms reset
+
+            // 2. Clear reset bit
+            ctrl->op->portsc[i] &= ~(1 << 8);
+            delay_ms(10); // Wait for port to recover
+
+            // 3. Read status again to check speed
+            status = ctrl->op->portsc[i];
+            
+            // Check if the port actually enabled itself (Bit 2)
+            if (status & (1 << 2)) {
+                printk(T,"EHCI: Port %d enabled! High-Speed device attached.\n", i);
+                // Here is where you would normally set up the device address
+            } else {
+                // IMPORTANT: If it didn't enable, it's a Low/Full speed device (like a keyboard!)
+                // We MUST set the "Port Owner" bit (Bit 13) to hand it to the UHCI companion.
+                printk(T,"EHCI: Port %d is Low/Full speed. Handoff to Companion Controller.\n", i);
+                ctrl->op->portsc[i] |= (1 << 13);
+            }
         }
     }
 }
 
+// --- NEW: Controller Start Sequence ---
 static void ehci_init(uint32_t bar0) {
-    uint32_t base = bar0 & ~0xF;  // Mask off lower 4 bits for memory type
+    uint32_t base = bar0 & ~0xF;
+    if (!base) return;
 
-    if (!base) {
-        printk("EHCI: Invalid BAR0 address\n");
-        return;
-    }
-
-    printk("EHCI: Mapping MMIO base 0x%x\n", base);
-
-    // Map capability registers
     ehci_ctrlr.cap = (ehci_cap_regs_t*)mmio_map(base, EHCI_REG_SIZE);
+    ehci_ctrlr.op = (ehci_op_regs_t*)((uint8_t*)ehci_ctrlr.cap + ehci_ctrlr.cap->caplength);
+    ehci_ctrlr.port_count = ehci_ctrlr.cap->hcsparams & 0x0F;
 
-    if (!ehci_ctrlr.cap) {
-        printk("EHCI: MMIO mapping failed\n");
-        return;
-    }
+    if (ehci_ctrlr.port_count == 0 || ehci_ctrlr.port_count > 15) ehci_ctrlr.port_count = 1;
 
-    // Read capability register length to find operational registers
-    uint8_t caplength = ehci_ctrlr.cap->caplength;
-    printk("EHCI: Capability register length: %d bytes\n", caplength);
+    // 1. Stop the controller just in case BIOS left it running
+    ehci_ctrlr.op->usbcmd &= ~(1 << 0); // Clear RS (Run/Stop) bit
+    while (ehci_ctrlr.op->usbcmd & (1 << 0)); // Wait for it to stop
 
-    // Operational registers are at base + caplength
-    ehci_ctrlr.op = (ehci_op_regs_t*)((uint8_t*)ehci_ctrlr.cap + caplength);
+    // 2. Reset the controller
+    ehci_ctrlr.op->usbcmd |= (1 << 1); // Set HCRESET bit
+    while (ehci_ctrlr.op->usbcmd & (1 << 1)); // Wait for reset to complete
 
-    // Extract port count from HCSPARAMS (bits 3:0)
-    uint32_t hcsparams = ehci_ctrlr.cap->hcsparams;
-    ehci_ctrlr.port_count = hcsparams & 0x0F;
+    // 3. Route all ports to EHCI by default (Configure Flag)
+    ehci_ctrlr.op->configflag = 1;
+    delay_ms(5);
 
-    if (ehci_ctrlr.port_count == 0 || ehci_ctrlr.port_count > 15) {
-        // Invalid port count, default to reasonable value
-        printk("EHCI: Invalid port count %d, defaulting to 1\n", ehci_ctrlr.port_count);
-        ehci_ctrlr.port_count = 1;
-    }
+    // 4. Start the controller!
+    ehci_ctrlr.op->usbcmd |= (1 << 0); // Set RS (Run) bit
+    ehci_ctrlr.is_running = true;
 
-    printk("EHCI: Controller initialized with %d ports\n", ehci_ctrlr.port_count);
+    printk(T,"EHCI: Controller started with %d ports.\n", ehci_ctrlr.port_count);
 
-    // Scan ports for connected devices
+    // Scan ports and reset devices
     ehci_scan_ports(&ehci_ctrlr);
 }
 
+// --- Your USB Init (Mostly unchanged) ---
 void usb_init() {
-    printk("USB: Initializing USB subsystem...\n");
-
+    printk(T,"USB: Initializing USB subsystem...\n");
     pci_device_t dev;
     int controller_found = 0;
-    int devices_detected = 0;
-    int max_retries = 5;
-    int retry = 0;
 
-    // Retry scanning up to 5 times
-    while (retry < max_retries && controller_found == 0) {
-        retry++;
-        printk("USB: Scanning PCI buses for USB controllers (attempt %d/%d)...\n", retry, max_retries);
-
-        // Scan all PCI devices for USB controllers
-        for_each_pci_device(dev) {
-            // Check if device is a USB controller
-            if (dev.class == PCI_CLASS_SERIAL && dev.subclass == PCI_SUBCLASS_USB) {
-                printk("USB: Controller found at %02x:%02x.%x (progIF: 0x%02x)\n",
-                       dev.bus, dev.slot, dev.func, dev.prog_if);
-
-                controller_found++;
-
-                // Handle different USB controller types
-                switch (dev.prog_if) {
-                    case PCI_PROGIF_EHCI: {
-                        printk("USB: Initializing EHCI controller...\n");
-                        uint32_t bar0 = pci_read_bar(dev.bus, dev.slot, dev.func, 0);
-                        
-                        if (bar0 != 0 && bar0 != 0xFFFFFFFFU) {
-                            printk("USB: EHCI BAR0: 0x%x\n", bar0);
-                            ehci_init(bar0);
-                            
-                            // Count connected devices
-                            for (int p = 0; p < ehci_ctrlr.port_count; p++) {
-                                if (ehci_ctrlr.op && (ehci_ctrlr.op->portsc[p] & 0x01)) {
-                                    devices_detected++;
-                                }
-                            }
-                        } else {
-                            printk("USB: Invalid BAR0 address for EHCI controller (0x%x)\n", bar0);
-                        }
-                        break;
-                    }
-                    case 0x10:  // UHCI (Universal Host Controller Interface)
-                        printk("USB: UHCI controller found at %02x:%02x.%x (not yet supported)\n",
-                               dev.bus, dev.slot, dev.func);
-                        break;
-                    case 0x30:  // xHCI (eXtensible Host Controller Interface)
-                        printk("USB: xHCI controller found at %02x:%02x.%x (not yet supported)\n",
-                               dev.bus, dev.slot, dev.func);
-                        break;
-                    default:
-                        printk("USB: Unknown USB controller type at %02x:%02x.%x (progIF: 0x%02x)\n",
-                               dev.bus, dev.slot, dev.func, dev.prog_if);
-                }
+    for_each_pci_device(dev) {
+        if (dev.class == PCI_CLASS_SERIAL && dev.subclass == PCI_SUBCLASS_USB) {
+            controller_found++;
+            
+            if (dev.prog_if == PCI_PROGIF_EHCI) {
+                printk(T,"USB: EHCI Controller found at %02x:%02x.%x\n", dev.bus, dev.slot, dev.func);
+                uint32_t bar0 = pci_read_bar(dev.bus, dev.slot, dev.func, 0);
+                ehci_init(bar0);
+            } 
+            else if (dev.prog_if == 0x00 || dev.prog_if == 0x10) {
+                // 0x00 is UHCI, 0x10 is OHCI. These are the "Companions"!
+                printk(T,"USB: Companion Controller (UHCI/OHCI) found at %02x:%02x.%x\n", dev.bus, dev.slot, dev.func);
+                // Future Step: Initialize UHCI to catch the keyboard you just handed off!
             }
         }
-
-        // If no controller found yet and retries remain, wait before retrying
-        if (controller_found == 0 && retry < max_retries) {
-            printk("USB: No controller found on attempt %d, retrying...\n", retry);
-        }
     }
 
-    // Report summary
-    if (controller_found == 0) {
-        printk("USB: No controllers found after %d attempts (class=0x%02x, subclass=0x%02x)\n",
-               max_retries, PCI_CLASS_SERIAL, PCI_SUBCLASS_USB);
-        printk("USB: Check BIOS/UEFI settings to ensure USB is enabled\n");
-        printk("USB: Run 'scanAll()' or 'scan_usb_controllers()' for debugging\n");
-    } else {
-        printk("USB: %d controller(s) found on attempt %d, %d device(s) detected\n",
-               controller_found, retry, devices_detected);
-    }
+    if (!controller_found) printk(T,"USB: No controllers found.\n");
+}
+
+// --- NEW: Polling Hook for input.c ---
+void usb_poll_all(void) {
+    if (!ehci_ctrlr.is_running) return;
+    usb_kbd_poll();
 }

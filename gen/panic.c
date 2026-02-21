@@ -2,12 +2,14 @@
  * Kernel panic implementation.
  */
 
+#include "ark/shutdown.h"
 #include "ark/types.h"
 #include "ark/printk.h"
 #include "ark/panic.h"
-#include "init.h"
+#include "./init.h"
 #include "ark/pci.h" //new mod created by yahya mokhlis
 #include "ark/input.h"
+#include "hw/vendor.h"
 
 static void busy_delay(u32 loops) {
     for (volatile u32 i = 0; i < loops; ++i) {
@@ -17,38 +19,57 @@ static void busy_delay(u32 loops) {
 
 void kernel_panic(const char *msg) {
     __asm__ __volatile__("cli");  // Stop interrupts
+    mascot(); // Print mascot before panic message
     busy_delay(20000000);
-    printk(":: Found something in ramfs.please renter the </TASK>\n");
     busy_delay(20000000);
-    printk(":: type </TASK> to run it\n");
+    printk(T,"CPU for this run is : ");
+    cpu_name();
+    printk("\n");
     busy_delay(20000000);
-    //char input_buffer[12];
-   // printk("path(/usr/): ");
-    //input_read(input_buffer, sizeof(input_buffer), false);
-    //printk("%s: NOT FOUND!!!\n", input_buffer);
-    printk("[PS/2][K:found ps/2] please recompile with the </task>");
-    printk(":: Fail to boot into any task to sync\n");
+    printk(T," please recompile with the </task>\n");
+    printk(T," Fail to boot into any task to sync\n");
 
-    printk(":: A fatal kernel error has occurred.\n");
-    printk(":: The system has been halted to prevent corruption.\n\n");
+    printk(T," A fatal kernel error has occurred.\n");
+    printk(T," The system has been halted to prevent corruption.\n");
 
     if (msg) {
-        printk(":: Panic reason : %s\n", msg);
+        printk(T," Panic reason : %s\n", msg);
     } else {
-        printk(":: Panic reason : Unknown fatal error\n");
+        printk(T," Panic reason : Unknown fatal error\n");
     }
 
-    printk("\n::System state  : HALTED\n");
-    printk("::Kernel mode   : Protected\n");
+    printk(T,"System state  : HALTED\n");
+    printk(T,"Kernel mode   : Protected\n");
 
-    printk("::\n");
-    printk(":: If this problem persists, check drivers, memory,\n");
-    printk(":: or recent kernel changes.\n");
-    printk(":: restart the system\n");
+    printk(T,"If this problem persists, check drivers, memory,\n");
+    printk(T,"or recent kernel changes.\n");
+    printk(T,"restart the system\n");
+    busy_delay(100000000);
+    printk("1..");
+    busy_delay(100000000);
+    printk("2..");
+    busy_delay(100000000);
+    printk("3..");
+    busy_delay(100000000);
+    k_shutdown();
     for (;;) {
         __asm__ __volatile__("hlt");
     }
 }
 
 
-
+void mascot() {
+    printk("        .~.~.~.\n");
+    printk("      .'       '.\n");
+    printk("     /   ^   ^   \\\n");
+    printk("    |    (. .)    |\n");
+    printk("    |     )-(     |\n");
+    printk("    |    / V \\    |\n");
+    printk("   /|   /     \\   |\\\n");
+    printk("  / |  / ,-=-. \\  | \\\n");
+    printk(" /  \\_/   | |   \\_/  \\\n");
+    printk("/   / \\  _| |_  / \\   \\\n");
+    printk("\\__/ /\\/       \\/\\ \\__/\n");
+    printk("    /  ~~~   ~~~  \\\n");
+    printk("   /_______________\\\n");
+}

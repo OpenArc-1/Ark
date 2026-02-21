@@ -27,7 +27,7 @@ void ramfs_init(void) {
         g_ramfs_files[i].filename[0] = '\0';
     }
     
-    printk(":: Initialized ramfs\n");
+    printk(T,"Initialized ramfs\n");
 }
 
 /**
@@ -37,7 +37,7 @@ void ramfs_init(void) {
 void ramfs_prepare(void) {
     /* Ensure the file table is ready without clearing */
     g_ramfs_mounted = 0;
-    printk(":: Prepared for module loading\n");
+    printk(T,"Prepared for module loading\n");
 }
 
 /**
@@ -45,12 +45,12 @@ void ramfs_prepare(void) {
  */
 void ramfs_mount(void) {
     if (g_ramfs_mounted) {
-        printk(":: Already mounted\n");
+        printk(T,"Already mounted\n");
         return;
     }
     
     g_ramfs_mounted = true;
-    printk(":: Root filesystem mounted (%u files)\n", g_ramfs_file_count);
+    printk(T,"Root filesystem mounted (%u files)\n", g_ramfs_file_count);
 }
 
 /**
@@ -72,18 +72,18 @@ static u8 streq(const char *a, const char *b) {
  */
 u8 ramfs_add_file(const char *filename, u8 *data, u32 size) {
     if (!filename || !data || size == 0) {
-        printk(":: Invalid parameters for add_file\n");
+        printk(T,"Invalid parameters for add_file\n");
         return 0;
     }
     
     if (g_ramfs_file_count >= RAMFS_MAX_FILES) {
-        printk(":: File table full, cannot add '%s'\n", filename);
+        printk(T,"File table full, cannot add '%s'\n", filename);
         return 0;
     }
     
     /* Check if file already exists */
     if (ramfs_file_exists(filename)) {
-        printk(":: File '%s' already exists\n", filename);
+        printk(T,"File '%s' already exists\n", filename);
         return 0;
     }
     
@@ -103,7 +103,7 @@ u8 ramfs_add_file(const char *filename, u8 *data, u32 size) {
     
     ++g_ramfs_file_count;
     
-    printk(":: Added file '%s' (%u bytes)\n", filename, size);
+    printk(T,"Added file '%s' (%u bytes)\n", filename, size);
     return 1;
 }
 
@@ -141,10 +141,10 @@ u8 *ramfs_get_file(const char *filename, u32 *out_size) {
  * List all files in ramfs (for debugging)
  */
 void ramfs_list_files(void) {
-    printk(":: Files in ramfs (%u total):\n", g_ramfs_file_count);
+    printk(T,"Files in ramfs (%u total):\n", g_ramfs_file_count);
     for (u32 i = 0; i < g_ramfs_file_count; ++i) {
         if (g_ramfs_files[i].valid) {
-            printk("::   - %s (%u bytes)\n", 
+            printk(T,"  - %s (%u bytes)\n", 
                    g_ramfs_files[i].filename, 
                    g_ramfs_files[i].size);
         }

@@ -3,9 +3,9 @@
 
 set -e
 
-KERNEL="/mnt/c/Users/adnan/Desktop/Ark-main/bzImage"
-INITBIN="/mnt/c/Users/adnan/Desktop/Ark-main/init"
-INITSC="/mnt/c/Users/adnan/Desktop/Ark-main/init.init"
+KERNEL="/mnt/c/Users/adnan/OneDrive/Desktop/Ark-main/bzImage"
+INITBIN="/mnt/c/Users/adnan/OneDrive/Desktop/Ark-main/init"
+INITSC="/mnt/c/Users/adnan/OneDrive/Desktop/Ark-main/init.init"
 OUTPUT="ark.img"
 SIZE_MB=245
 
@@ -59,9 +59,9 @@ EOF
 # Install GRUB2
 if command -v grub-install &>/dev/null; then
     sudo grub-install --target=i386-pc --boot-directory="$MOUNTPOINT/boot" "$LOOPDEV"
-    echo "[+] GRUB2 installed"
+    echo ":: GRUB2 installed"
 else
-    echo "[!] grub-install not found, GRUB2 not installed"
+    echo ":: grub-install not found, GRUB2 not installed"
 fi
 
 # Cleanup
@@ -69,6 +69,6 @@ sudo umount "$MOUNTPOINT"
 sudo losetup -d "$LOOPDEV"
 rm -rf "$MOUNTPOINT"
 
-echo "[+] Bootable disk created: $OUTPUT"
+echo ":: Bootable disk created: $OUTPUT"
 echo "To test:"
 echo "  qemu-system-i386 -drive file=$OUTPUT,format=raw -m 256M -serial stdio"

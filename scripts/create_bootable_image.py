@@ -40,7 +40,7 @@ def create_disk_image(kernel_path, output_image, size_mb=128):
             
             print("[*] Disk image formatted (MBR + FAT32)")
         except:
-            print("[!] Warning: Could not create partitioned image (requires parted/losetup)")
+            print(":: Warning: Could not create partitioned image (requires parted/losetup)")
             print("[*] Creating simple flat image instead")
     
     return True
@@ -86,12 +86,12 @@ def main():
     
     # Verify kernel exists
     if not os.path.exists(kernel_path):
-        print(f"[!] Error: Kernel file not found: {kernel_path}")
+        print(f":: Error: Kernel file not found: {kernel_path}")
         sys.exit(1)
     
     # Create disk image
     if create_disk_image(kernel_path, output_image, size_mb):
-        print(f"[+] Bootable disk image created: {output_image}")
+        print(f":: Bootable disk image created: {output_image}")
         print("")
         print("To test with QEMU:")
         print(f"  qemu-system-i386 -drive file={output_image},format=raw -m 256M")
@@ -100,7 +100,7 @@ def main():
         print(f"  sudo dd if={output_image} of=/dev/sdX bs=1M status=progress")
         print("  (Replace /dev/sdX with your USB device)")
     else:
-        print("[!] Failed to create bootable disk image")
+        print(":: Failed to create bootable disk image")
         sys.exit(1)
 
 if __name__ == '__main__':

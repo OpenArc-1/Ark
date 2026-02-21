@@ -52,7 +52,7 @@ typedef struct {
 /* Load and execute ELF binary in memory */
 int elf_execute(u8 *binary, u32 size, const ark_kernel_api_t *api) {
     if (!binary || size < 4) {
-        printk("[elf] Invalid binary or too small (%u bytes)\n", size);
+        printk(T,"Invalid binary or too small (%u bytes)\n", size);
         return -1;
     }
 
@@ -61,7 +61,7 @@ int elf_execute(u8 *binary, u32 size, const ark_kernel_api_t *api) {
     /* Check ELF magic */
     if (elf->magic != ELF_MAGIC) {
         /* Treat as raw binary */
-        printk("[elf] Raw binary, executing at 0x%x\n", (u32)binary);
+        printk(T, "Raw binary, executing at 0x%x\n", (u32)binary);
         if (api) {
             ark_init_entry_t entry_func = (ark_init_entry_t)binary;
             return entry_func(api);
@@ -73,7 +73,7 @@ int elf_execute(u8 *binary, u32 size, const ark_kernel_api_t *api) {
         return 0;
     }
 
-    printk("[elf] ELF binary found, entry: 0x%x, phnum=%d\n", elf->entry, elf->phnum);
+    printk(T, "ELF binary found, entry: 0x%x, phnum=%d\n", elf->entry, elf->phnum);
 
     /* Load program headers into memory */
     elf_phdr_t *ph = (elf_phdr_t *)(binary + elf->phoff);
@@ -83,11 +83,11 @@ int elf_execute(u8 *binary, u32 size, const ark_kernel_api_t *api) {
         u8 *dest = (u8 *)ph[i].paddr;   // for simplicity, use physical address
         for (u32 j = 0; j < ph[i].filesz; ++j) dest[j] = src[j];
         for (u32 j = ph[i].filesz; j < ph[i].memsz; ++j) dest[j] = 0; // zero init
-        printk("[elf] Loaded segment %d: mem=0x%x..0x%x\n", i, (u32)dest, (u32)(dest + ph[i].memsz));
+        printk(T, "Loaded segment %d: mem=0x%x..0x%x\n", i, (u32)dest, (u32)(dest + ph[i].memsz));
     }
 
     /* Execute entry point */
-    printk("[elf] Jumping to entry 0x%x\n", elf->entry);
+    printk(T, "Jumping to entry 0x%x\n", elf->entry);
     busy_delay(100000);
     if (api) {
         ark_init_entry_t entry_func = (ark_init_entry_t)elf->entry;

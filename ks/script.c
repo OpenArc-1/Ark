@@ -159,7 +159,7 @@ static const char *scan_script(const u8 *data, u32 size, char *out_path, u32 max
     if (read_script_line(data, size, &pos, line, SCRIPT_MAX_LINE) > 0) {
         if (parse_shebang(line)) {
             found_init_tag = 1;
-            printk("[script] Found #!init tag\n");
+            printk(T,"Found #!init tag\n");
         }
     }
     
@@ -175,7 +175,7 @@ static const char *scan_script(const u8 *data, u32 size, char *out_path, u32 max
         
         /* Try to parse file:/ directive */
         if (parse_file_directive(line, out_path, max_path_len)) {
-            printk("[script] Found file:/ directive: %s\n", out_path);
+            printk(T,"Found file:/ directive: %s\n", out_path);
             return out_path;
         }
     }
@@ -188,14 +188,14 @@ static const char *scan_script(const u8 *data, u32 size, char *out_path, u32 max
  * Uses ark/printk, input, and hid/kbd100 as requested
  */
 u8 script_scan_and_execute(void) {
-    printk("[script] Scanning ramfs for #!init scripts...\n");
+    printk(T,"Scanning ramfs for #!init scripts...\n");
     
     /* List files for debugging */
     ramfs_list_files();
     
     /* Get file count and iterate through all files */
     u32 file_count = ramfs_get_file_count();
-    printk("[script] Scanning %u files in ramfs...\n", file_count);
+    printk(T,"Scanning %u files in ramfs...\n", file_count);
     
     u8 found_script = 0;
     char binary_path[256];
@@ -208,36 +208,36 @@ u8 script_scan_and_execute(void) {
         
         if (ramfs_get_file_by_index(i, filename, &file_data, &file_size)) {
             if (file_data && file_size > 0) {
-                printk("[script] Checking file: %s (%u bytes)\n", filename, file_size);
+                printk(T,"Checking file: %s (%u bytes)\n", filename, file_size);
                 
                 /* Scan the file for #!init script */
                 if (scan_script(file_data, file_size, binary_path, sizeof(binary_path))) {
-                    printk("[script] Found #!init script in %s\n", filename);
-                    printk("[script] Binary to execute: %s\n", binary_path);
+                    printk(T,"Found #!init script in %s\n", filename);
+                    printk(T,"Binary to execute: %s\n", binary_path);
                     
                     /* Get the binary file */
                     u32 binary_size = 0;
                     u8 *binary_data = ramfs_get_file(binary_path, &binary_size);
                     
                     if (binary_data && binary_size > 0) {
-                        printk("[script] Loading binary: %s (%u bytes)\n", binary_path, binary_size);
+                        printk(T,"Loading binary: %s (%u bytes)\n", binary_path, binary_size);
                         
                         /* Poll keyboard to ensure it's ready (input already initialized in kernel_main) */
                         kbd_poll();
                         if (kbd_is_initialized()) {
-                            printk("[script] Keyboard ready\n");
+                            printk(T,"Keyboard ready\n");
                         }
                         
                         /* Execute the binary using the bin system loader */
-                        printk("[script] Executing binary via elf_execute...\n");
+                        printk(T,"Executing binary via elf_execute...\n");
                         int exit_code = elf_execute(binary_data, binary_size, ark_kernel_api());
                         
-                        printk("[script] Binary execution completed with exit code: %d\n", exit_code);
+                        printk(T,"Binary execution completed with exit code: %d\n", exit_code);
                         found_script = 1;
                         
                         return 1; /* Success - found and executed script */
                     } else {
-                        printk("[script] ERROR: Binary file not found: %s\n", binary_path);
+                        printk(T,"ERROR: Binary file not found: %s\n", binary_path);
                     }
                 }
             }
@@ -245,7 +245,7 @@ u8 script_scan_and_execute(void) {
     }
     
     if (!found_script) {
-        printk("[script] No #!init scripts found in ramfs\n");
+        printk(T,"No #!init scripts found in ramfs\n");
     }
     
     return found_script;

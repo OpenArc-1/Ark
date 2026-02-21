@@ -162,7 +162,6 @@ int _start(const ark_kernel_api_t *api) {
     api->printk("test shell on %s. Type 'help' for commands.\n\n", ttyname);
 
     for (;;) {
-        api->printk(K_ID); //cus of printk lacking multiple char
 	api->printk("$ "); //two sperate lines for prompting 
         char line[LINE_MAX];
         api->input_read(line, sizeof(line), 0);

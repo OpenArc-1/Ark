@@ -2,33 +2,39 @@ ENTRY(_start)
 
 SECTIONS
 {
-  /* Load kernel at 1 MiB. */
-  . = 1M;
+    /* Load kernel at 4 MiB. */
+    . = 2M;
 
-  .multiboot :
-  {
-    *(.multiboot)
-  }
+    /* Create a symbol at the very start of the kernel */
+    _kernel_start = .;
 
-  .text :
-  {
-    *(.text*)
-  }
+    .multiboot :
+    {
+        *(.multiboot)
+    }
 
-  .rodata :
-  {
-    *(.rodata*)
-  }
+    .text :
+    {
+        *(.text*)
+    }
 
-  .data :
-  {
-    *(.data*)
-  }
+    .rodata :
+    {
+        *(.rodata*)
+    }
 
-  .bss :
-  {
-    *(.bss*)
-    *(COMMON)
-  }
+    .data :
+    {
+        *(.data*)
+    }
+
+    .bss :
+    {
+        *(.bss*)
+        *(COMMON)
+    }
+
+    /* Ensure the end is aligned to a page boundary (4KB) */
+    . = ALIGN(4096);
+    _kernel_end = .;
 }
-

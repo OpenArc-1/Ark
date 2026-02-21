@@ -83,7 +83,7 @@ void ip_set_static(ip_addr_t ip, ip_addr_t mask, ip_addr_t gateway) {
     g_net_config.gateway = gateway;
     g_net_config.configured = 1;
     
-    printk("[IP] Static configuration set:\n");
+    printk(T,"[IP] Static configuration set:\n");
     printk("     IP: ");
     ip_print(ip);
     printk("\n");
@@ -98,7 +98,7 @@ void ip_set_static(ip_addr_t ip, ip_addr_t mask, ip_addr_t gateway) {
 // Set MAC address
 void ip_set_mac(uint8_t *mac) {
     memcpy(g_net_config.mac, mac, 6);
-    printk("[IP] MAC address set: %02x:%02x:%02x:%02x:%02x:%02x\n",
+    printk(T,"[IP] MAC address set: %02x:%02x:%02x:%02x:%02x:%02x\n",
            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
 
@@ -140,7 +140,7 @@ static void eth_send(uint8_t *dest_mac, uint16_t type, void *payload, uint16_t p
     // Send complete frame
     e1000_send(frame_buf, sizeof(eth_hdr_t) + payload_len);
     
-    printk("[ETH] Sent frame to %02x:%02x:%02x:%02x:%02x:%02x (type: 0x%04x)\n",
+    printk(T,"[ETH] Sent frame to %02x:%02x:%02x:%02x:%02x:%02x (type: 0x%04x)\n",
            dest_mac[0], dest_mac[1], dest_mac[2], dest_mac[3], dest_mac[4], dest_mac[5], type);
 }
 
@@ -163,7 +163,7 @@ static void arp_cache_add(uint32_t ip, uint8_t *mac) {
             arp_cache[i].ip = ip;
             memcpy(arp_cache[i].mac, mac, 6);
             arp_cache[i].valid = 1;
-            printk("[ARP] Cache: ");
+            printk(T,"[ARP] Cache: ");
             ip_print(uint32_to_ip(ip));
             printk(" -> %02x:%02x:%02x:%02x:%02x:%02x\n",
                    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -176,7 +176,7 @@ static void arp_cache_add(uint32_t ip, uint8_t *mac) {
 static void arp_handle_packet(arp_packet_t *arp) {
     uint16_t opcode = ((arp->opcode >> 8) & 0xFF) | ((arp->opcode & 0xFF) << 8);
     
-    printk("[ARP] Packet: opcode=%d, from ", opcode);
+    printk(T,"[ARP] Packet: opcode=%d, from ", opcode);
     ip_print(uint32_to_ip(arp->src_ip));
     printk("\n");
     
@@ -186,7 +186,7 @@ static void arp_handle_packet(arp_packet_t *arp) {
     // If this is a request for our IP, send a reply
     if (opcode == ARP_OPCODE_REQUEST && 
         arp->dest_ip == ip_to_uint32(g_net_config.local_ip)) {
-        printk("[ARP] Sending reply for ");
+        printk(T,"[ARP] Sending reply for ");
         ip_print(uint32_to_ip(arp->dest_ip));
         printk("\n");
         
@@ -210,7 +210,7 @@ static void arp_handle_packet(arp_packet_t *arp) {
 static void ipv4_handle_packet(ipv4_hdr_t *hdr, uint16_t payload_len) {
     uint8_t protocol = hdr->protocol;
     
-    printk("[IP] IPv4 packet: proto=%d, from ", protocol);
+    printk(T,"[IP] IPv4 packet: proto=%d, from ", protocol);
     ip_print(uint32_to_ip(hdr->src_ip));
     printk(" to ");
     ip_print(uint32_to_ip(hdr->dst_ip));
@@ -218,29 +218,29 @@ static void ipv4_handle_packet(ipv4_hdr_t *hdr, uint16_t payload_len) {
     
     // Check if packet is for us
     if (hdr->dst_ip != ip_to_uint32(g_net_config.local_ip)) {
-        printk("[IP] Not for us, ignoring\n");
+        printk(T,"[IP] Not for us, ignoring\n");
         return;
     }
     
     switch (protocol) {
         case 1:  // ICMP
-            printk("[IP] ICMP packet received\n");
+            printk(T,"[IP] ICMP packet received\n");
             break;
         case 6:  // TCP
-            printk("[IP] TCP packet received\n");
+            printk(T,"[IP] TCP packet received\n");
             break;
         case 17: // UDP
-            printk("[IP] UDP packet received\n");
+            printk(T,"[IP] UDP packet received\n");
             break;
         default:
-            printk("[IP] Unknown protocol: %d\n", protocol);
+            printk(T,"[IP] Unknown protocol: %d\n", protocol);
     }
 }
 
 // Process incoming packet from e1000
 void ip_handle_packet(void *packet, uint16_t len) {
     if (len < sizeof(eth_hdr_t)) {
-        printk("[IP] Packet too short\n");
+        printk(T,"[IP] Packet too short\n");
         return;
     }
     
@@ -293,7 +293,7 @@ static void arp_request(uint32_t target_ip) {
     memset(arp.dest_mac, 0xFF, 6);  // Broadcast
     arp.dest_ip = target_ip;
     
-    printk("[ARP] Requesting ");
+    printk(T,"[ARP] Requesting ");
     ip_print(uint32_to_ip(target_ip));
     printk("\n");
     
@@ -321,7 +321,7 @@ static void dhcp_send_discover(void) {
     dhcp.options[opt_idx++] = 1;   // DISCOVER
     dhcp.options[opt_idx++] = 255; // End
     
-    printk("[DHCP] Sending DISCOVER (XID: 0x%x)\n", dhcp_xid);
+    printk(T,"[DHCP] Sending DISCOVER (XID: 0x%x)\n", dhcp_xid);
     
     // Send as UDP packet (broadcast to 255.255.255.255:67 from 0.0.0.0:68)
     // For now, just indicate intent
@@ -343,11 +343,11 @@ int dhcp_poll(void) {
 
 // Initialize IP stack and scan network
 void ip_init(void) {
-    printk("[IP] Initializing IP networking stack...\n");
-    printk("[IP] Version: IPv4\n");
+    printk(T,"[IP] Initializing IP networking stack...\n");
+    printk(T,"[IP] Version: IPv4\n");
     
     // Print MAC
-    printk("[IP] MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+    printk(T,"[IP] MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
            g_net_config.mac[0], g_net_config.mac[1],
            g_net_config.mac[2], g_net_config.mac[3],
            g_net_config.mac[4], g_net_config.mac[5]);
@@ -363,6 +363,6 @@ void ip_init(void) {
     
     ip_set_static(default_ip, default_mask, default_gw);
     
-    printk("[IP] Stack ready - polling e1000 for packets\n");
+    printk(T,"[IP] Stack ready - polling e1000 for packets\n");
     g_net_config.configured = 1;
 }

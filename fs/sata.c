@@ -28,7 +28,7 @@ static u32 sata_controller_count = 0;
 static volatile void *ahci_base = NULL;
 
 void sata_init(void) {
-    printk("[    0.000163] Probing SATA controllers (AHCI)...\n");
+    printk(T,"Probing SATA controllers (AHCI)...\n");
     
     sata_controller_count = 0;
     
@@ -39,13 +39,13 @@ void sata_init(void) {
     for_each_pci_device(dev) {
         /* Look for SATA controller (class 0x01, subclass 0x06) */
         if (dev.class == 0x01 && dev.subclass == 0x06) {
-            printk("[    0.000163] sata-ahci: Found SATA controller %04x:%04x at %d:%d:%d\n",
+            printk(T,"sata-ahci: Found SATA controller %04x:%04x at %d:%d:%d\n",
                    dev.vendor_id, dev.device_id, dev.bus, dev.slot, dev.func);
             
             /* Get BAR0 which contains the AHCI base address */
             u32 bar0 = pci_read_bar(dev.bus, dev.slot, dev.func, 0);
             if (!bar0) {
-                printk("[    0.000163] sata-ahci: Error reading BAR0\n");
+                printk(T,"sata-ahci: Error reading BAR0\n");
                 continue;
             }
             
@@ -56,10 +56,10 @@ void sata_init(void) {
     }
     
     if (found == 0) {
-        printk("[    0.000164] No SATA controllers found\n");
+        printk(T,"No SATA controllers found\n");
     } else {
-        printk("[    0.000165] Found %d SATA controller(s)\n", found);
-        printk("[    0.000166] SATA subsystem initialized\n");
+        printk(T,"Found %d SATA controller(s)\n", found);
+        printk(T,"SATA subsystem initialized\n");
     }
 }
 
@@ -116,7 +116,7 @@ int sata_read(u8 bus, u8 port, u32 lba, u32 count, void *buffer) {
         return -1;
     }
     
-    printk("    sata-ahci: Read operation not yet implemented\n");
+    printk(T,"sata-ahci: Read operation not yet implemented\n");
     
     return -1;
 }
@@ -132,7 +132,7 @@ int sata_write(u8 bus, u8 port, u32 lba, u32 count, const void *buffer) {
         return -1;
     }
     
-    printk("    sata-ahci: Write operation not yet implemented\n");
+    printk(T,"sata-ahci: Write operation not yet implemented\n");
     
     return -1;
 }

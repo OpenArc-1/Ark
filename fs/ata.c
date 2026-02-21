@@ -101,12 +101,12 @@ static void ata_identify(u8 bus, u8 drive) {
     dev->type = ATA_TYPE_ATA;
     
     ata_device_count++;
-    printk("[    0.000162] ata: Found device at bus %d drive %d: %u sectors\n", 
+    printk(T,"ata: Found device at bus %d drive %d: %u sectors\n", 
            bus, drive, dev->lba_sectors);
 }
 
 void ata_init(void) {
-    printk("[    0.000161] Probing ATA controllers (IDE)...\n");
+    printk(T,"Probing ATA controllers (IDE)...\n");
     
     ata_device_count = 0;
     
@@ -119,9 +119,9 @@ void ata_init(void) {
     ata_identify(1, 1);
     
     if (ata_device_count == 0) {
-        printk("[    0.000162] No ATA devices found\n");
+        printk(T,"No ATA devices found\n");
     } else {
-        printk("[    0.000162] Found %d ATA device(s)\n", ata_device_count);
+        printk(T,"Found %d ATA device(s)\n", ata_device_count);
     }
 }
 
@@ -180,7 +180,7 @@ int ata_write(u8 bus, u8 drive, u32 lba, u32 count, const void *buffer) {
         return -1;
     }
     
-    printk("    ata: Write operation not yet implemented\n");
+    printk(T,"ata: Write operation not yet implemented\n");
     
     return -1;
 }

@@ -1,11 +1,8 @@
 #include "ark/types.h"
 #include "../io/built-in.h"  
+#include "ark/printk.h"
 
 #define BIOS_DATA ((u8*)0x8000)
-
-/* ---------------- External Kernel Print ---------------- */
-
-extern void printk(const char* str);
 
 /* ---------------- Helpers ---------------- */
 
@@ -30,16 +27,6 @@ static void print_num(u32 num) {
         char c[2] = { buf[i], 0 };
         printk(c);
     }
-}
-
-/* Log prefix like Linux dmesg [tag][time] */
-static void log_prefix(const char* tag) {
-    printk("[");
-    printk(tag);
-    printk("][    0.");
-    print_num(time);
-    printk("] ");
-    time += 1234;  
 }
 
 /* ---------------- CPU INFO ---------------- */
@@ -75,32 +62,24 @@ void show_sysinfo_bios(void) {
     char cpu_vendor[13];
     get_cpu_vendor(cpu_vendor);
 
-    // Show logs
-    log_prefix("bios");
-    printk("Boot environment initialized\n");
-
-    log_prefix("cpu");
-    printk("vendor: ");
+    printk(T,"Boot environment initialized\n");
+    printk(T,"vendor: ");
     printk(cpu_vendor);
     printk("\n");
 
-    log_prefix("mem");
-    printk("conventional: ");
+    printk(T,"conventional: ");
     print_num(conv_mem);
     printk(" KB\n");
 
-    log_prefix("mem");
-    printk("extended: ");
+    printk(T,"extended: ");
     print_num(ext_mem);
     printk(" KB\n");
 
-    log_prefix("mem");
-    printk("total ram: ");
+    printk(T,"total ram: ");
     print_num(total_mem_mb);
     printk(" MB\n");
 
-    log_prefix("rtc");
-    printk("time: ");
+    printk(T,"time: ");
     if (hour < 10) printk("0");
     print_num(hour);
     printk(":");
@@ -111,11 +90,9 @@ void show_sysinfo_bios(void) {
     print_num(sec);
     printk("\n");
 
-    log_prefix("video");
-    printk("mode: ");
+    printk(T,"mode: ");
     print_num(video_mode);
     printk("\n");
 
-    log_prefix("kernel");
-    printk("System ready.\n");
+    printk(T,"System ready.\n");
 }

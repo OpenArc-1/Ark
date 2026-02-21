@@ -2,6 +2,9 @@
 # Ark OS Build System (x86, 32-bit freestanding)
 # Minimal Linux-style output
 # -------------------------------------------------------------------
+# Kernel INFO
+CODE_NAME   ?= affactionate cat
+BUILD_DATE  ?= 2026/2/11 5:52 PM
 
 # Tools
 ARCH        ?= x86
@@ -25,9 +28,12 @@ KERNEL_INC  ?= include
 
 # Userspace display server
 BUILD_INIT       ?= 1
-INIT_TEXT        ?= 0x1000
+INIT_TEXT        ?= 0x3000
 INIT_DATA        ?= 0x2000
 
+#demo for cat
+
+DEMO_CAT ?= new.txt
 # QEMU
 QEMU_RAM_MB ?= 256
 QEMU_NOGRAPHIC ?= 0
@@ -41,8 +47,14 @@ DISK_SIZE_MB    ?= 256
 DISK_IMAGE      ?= disk.img
 DISK_FS_IMAGE   ?= disk-with-fs.img
 
+#userspace include
+INXU = userspace/usr/
+
 # Demo script
 DEMO_SCRIPT ?= ks/demo.init
+
+# Output directory for object files
+OBJDIR := compiled
 
 # -------------------------------------------------------------------
 # Derived flags
@@ -81,7 +93,7 @@ ifeq ($(QEMU_NET),1)
   QEMU_FLAGS += -device e1000
 endif
 ifeq ($(QEMU_USB),1)
-  QEMU_FLAGS += -usb -device usb-kbd -device usb-mouse
+  QEMU_FLAGS += -usb -device usb-mouse
 endif
 ifneq ($(QEMU_SMP),1)
   QEMU_FLAGS += -smp $(QEMU_SMP)
@@ -102,15 +114,16 @@ SRCS := $(wildcard gen/*.c) \
         $(wildcard mp/*.c) \
         $(wildcard usb/*.c) \
         $(wildcard wf/*.c) \
-        $(wildcard arch/$(ARCH)/*.c)
-
+        $(wildcard arch/$(ARCH)/*.c)\
+	    $(wildcard mm/*c) \
+		$(wildcard gpu/*c)
 NASMSRCS := mp/bios.S
 GASSRCS  := $(wildcard arch/$(ARCH)/*.S)
-USERSPACE_SRCS := userspace/display_server.c
-USERSPACE_ASM  := userspace/display_server_entry.S
+USERSPACE_SRCS := userspace/init.c
 
-OBJS := $(SRCS:.c=.o) $(NASMSRCS:.S=.o) $(GASSRCS:.S=.o)
-USERSPACE_OBJS := $(USERSPACE_SRCS:.c=.o) $(USERSPACE_ASM:.S=.o)
+# Map all .o paths into compiled/
+OBJS         := $(patsubst %,$(OBJDIR)/%,$(SRCS:.c=.o) $(NASMSRCS:.S=.o) $(GASSRCS:.S=.o))
+USERSPACE_OBJS := $(patsubst %,$(OBJDIR)/%,$(USERSPACE_SRCS:.c=.o) $(USERSPACE_ASM:.S=.o))
 
 # -------------------------------------------------------------------
 # Targets
@@ -120,7 +133,7 @@ USERSPACE_OBJS := $(USERSPACE_SRCS:.c=.o) $(USERSPACE_ASM:.S=.o)
 
 all: bzImage
 ifneq ($(BUILD_INIT),0)
-all: init.bin
+all: init
 endif
 
 # ------------------------
@@ -133,30 +146,43 @@ bzImage: linker.ld $(OBJS)
 # ------------------------
 # Userspace init
 # ------------------------
-init.bin: userspace/linker.ld $(USERSPACE_OBJS)
+init: userspace/linker.ld $(USERSPACE_OBJS)
 	@printf "  LD      %s\n" $@
 	$(CC) -m32 -nostdlib -nostartfiles \
 	      -Ttext=$(INIT_TEXT) -Tdata=$(INIT_DATA) -T userspace/linker.ld \
 	      -o $@ $(USERSPACE_OBJS)
 
 # ------------------------
+# Ensure compiled/ subdirs exist before compiling
+# ------------------------
+$(OBJDIR)/%.o: | $(OBJDIR)
+
+$(OBJDIR):
+	@mkdir -p $(OBJDIR)
+
+# ------------------------
 # Compile C files
-# Compile C files
-%.o: %.c
+# ------------------------
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
 	@printf "  CC      %s\n" $@
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 # NASM assembly
-mp/%.o: mp/%.S
+$(OBJDIR)/mp/%.o: mp/%.S
+	@mkdir -p $(dir $@)
 	@printf "  AS      %s\n" $@
 	@$(NASM) -f elf32 $< -o $@
 
-# GAS assembly
-arch/$(ARCH)/%.o: arch/$(ARCH)/%.S
+# GAS assembly (arch)
+$(OBJDIR)/arch/$(ARCH)/%.o: arch/$(ARCH)/%.S
+	@mkdir -p $(dir $@)
 	@printf "  AS      %s\n" $@
 	@$(AS) --32 -o $@ $<
 
-userspace/%.o: userspace/%.S
+# GAS assembly (userspace)
+$(OBJDIR)/userspace/%.o: userspace/%.S
+	@mkdir -p $(dir $@)
 	@printf "  AS      %s\n" $@
 	@$(AS) --32 -o $@ $<
 
@@ -164,9 +190,9 @@ userspace/%.o: userspace/%.S
 # Clean
 # ------------------------
 clean:
-	rm -f $(OBJS) $(USERSPACE_OBJS) bzImage init.bin \
+	rm -rf $(OBJDIR) bzImage init \
 	      $(DISK_IMAGE) $(DISK_FS_IMAGE) disk-with-init.img
-	@echo "[+] Cleaned"
+	@echo ":: Cleaned"
 
 # ------------------------
 # Disk images
@@ -174,27 +200,27 @@ clean:
 disk.img: bzImage
 	@$(PYTHON) scripts/create_bootable_image.py bzImage $(DISK_IMAGE) $(DISK_SIZE_MB)
 
-disk-with-fs.img: bzImage init.bin
+disk-with-fs.img: bzImage init
 	@$(PYTHON) scripts/create_disk_with_init.py bzImage init.bin $(DISK_FS_IMAGE) $(DISK_SIZE_MB)
 
 # ------------------------
 # QEMU targets
 # ------------------------
 run: bzImage
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage
+	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -initrd init -vga std
 
 run-disk: bzImage $(DISK_IMAGE)
 	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=$(DISK_IMAGE),format=raw
 
 run-disk-with-fs: bzImage $(DISK_FS_IMAGE)
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=$(DISK_FS_IMAGE),format=raw -initrd init.bin
+	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=$(DISK_FS_IMAGE),format=raw -initrd init -full-screen
 
-run-nographic: bzImage init.bin
-	$(QEMU) $(QEMU_FLAGS) -nographic -kernel bzImage -initrd init.bin
+run-nographic: bzImage init
+	$(QEMU) $(QEMU_FLAGS) -nographic -kernel bzImage -initrd init
 
-run-with-demo-script: bzImage init.bin $(DEMO_SCRIPT)
+run-with-demo-script: bzImage init $(DEMO_SCRIPT)
 	@echo "[*] Running with demo script: $(DEMO_SCRIPT)"
-	$(QEMU) $(QEMU_FLAGS) -nographic -kernel bzImage -initrd "$(DEMO_SCRIPT),init.bin"
+	$(QEMU) $(QEMU_FLAGS) -nographic -kernel bzImage -initrd "$(DEMO_SCRIPT),init"
 
 
 # ------------------------------------------------------------------------------

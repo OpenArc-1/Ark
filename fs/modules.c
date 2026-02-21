@@ -19,18 +19,18 @@ u32 modules_load_from_multiboot(multiboot_info_t *mbi) {
     u32 mod_count = mbi->mods_count;
     
     if (mod_count == 0) {
-        printk("[modules] No modules found in multiboot info\n");
+        printk(T,"No modules found in multiboot info\n");
         return 0;
     }
 
     if (!(mbi->flags & 0x08)) {  /* Check if modules flag is set */
-        printk("[modules] Modules flag not set in multiboot info\n");
+        printk(T,"Modules flag not set in multiboot info\n");
         return 0;
     }
 
     multiboot_module_t *mods = (multiboot_module_t *)(u32)mbi->mods_addr;
 
-    printk("[modules] Found %u module(s) from bootloader\n", mod_count);
+    printk(T,"Found %u module(s) from bootloader\n", mod_count);
 
     u32 loaded = 0;
     for (u32 i = 0; i < mod_count; ++i) {
@@ -76,17 +76,17 @@ u32 modules_load_from_multiboot(multiboot_info_t *mbi) {
             filename[j] = '\0';
         }
 
-        printk("[modules] Loading module %u: %s (%u bytes @ 0x%x)\n", 
+        printk(T,"Loading module %u: %s (%u bytes @ 0x%x)\n", 
                i + 1, filename, size, start);
 
         if (!ramfs_add_file(filename, data, size)) {
-            printk("[modules] Failed to load module '%s' into ramfs\n", filename);
+            printk(T,"Failed to load module '%s' into ramfs\n", filename);
         } else {
             ++loaded;
-            printk("[modules] Successfully added '%s' to ramfs\n", filename);
+            printk(T,"Successfully added '%s' to ramfs\n", filename);
         }
     }
 
-    printk("[modules] Successfully loaded %u module(s) into ramfs\n", loaded);
+    printk(T,"Successfully loaded %u module(s) into ramfs\n", loaded);
     return loaded;
 }

@@ -138,7 +138,7 @@ void kbd_poll(void)
 
 
 /* API */
-void kbd_init(void) { printk("[ps/2] Keyboard initialized\n"); }
+void kbd_init(void) { printk(T,"[ps/2] Keyboard initialized\n"); }
 char kbd_getc(void) { return kbd_buffer_get(); }
 bool kbd_has_input(void) { return kbd_buffer_has_data(); }
 bool kbd_is_initialized(void) { return true; }

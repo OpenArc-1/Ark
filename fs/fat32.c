@@ -43,7 +43,7 @@ static u8 fat32_initialized = 0;
 /* static u32 fat32_data_lba = 0; */
 
 void fat32_init(void) {
-    printk("[fat32::fs] FAT32: Initializing FAT32 filesystem...\n");
+    printk(T,"FAT32: Initializing FAT32 filesystem...\n");
     
     /* For now, FAT32 is initialized but not actively mounted */
     /* Full implementation would:
@@ -54,16 +54,16 @@ void fat32_init(void) {
      */
     
     fat32_initialized = 1;
-    printk("[:::] FAT32: Filesystem driver loaded\n");
+    printk(T,"FAT32: Filesystem driver loaded\n");
 }
 
 int fat32_mount(const char *device) {
     if (!fat32_initialized) {
-        printk("[fat32] Error: FAT32 not initialized\n");
+        printk(T,"Error: FAT32 not initialized\n");
         return -1;
     }
     
-    printk("[fat32] Mounting FAT32 filesystem on %s\n", device);
+    printk(T,"Mounting FAT32 filesystem on %s\n", device);
     
     /* Full implementation would actually mount the device */
     /* For now, return success as a stub */
@@ -71,7 +71,7 @@ int fat32_mount(const char *device) {
 }
 
 int fat32_open(const char *path) {
-    printk("[fat32] Opening file: %s\n", path);
+    printk(T,"Opening file: %s\n", path);
     return -1;  /* File not found */
 }
 
@@ -80,12 +80,12 @@ int fat32_read(int fd, void *buffer, u32 size) {
     (void)buffer;  /* Unused in stub */
     (void)size;  /* Unused in stub */
     
-    printk("[fat32] Reading %u bytes from file descriptor %d\n", size, fd);
+    printk(T,"Reading %u bytes from file descriptor %d\n", size, fd);
     return -1;  /* Read failed */
 }
 
 int fat32_close(int fd) {
-    printk("[fat32] Closing file descriptor %d\n", fd);
+    printk(T,"Closing file descriptor %d\n", fd);
     return 0;
 }
 

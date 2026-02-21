@@ -15,7 +15,7 @@ extern void ata_init(void);
 extern void sata_init(void);
 
 void fs_storage_init(void) {
-    printk("[    0.000160] Initialising storage subsystem...\n");
+    printk(T,"Initialising storage subsystem...\n");
     
     /* Initialize ATA/IDE controller */
     ata_init();
@@ -23,11 +23,11 @@ void fs_storage_init(void) {
     /* Initialize SATA/AHCI controller */
     sata_init();
     
-    printk("[    0.000167] Storage subsystem initialized\n");
+    printk(T,"Storage subsystem initialized\n");
 }
 
 void fs_built_in_init(void) {
-    printk("[    0.000150] Initializing filesystem drivers...\n");
+    printk(T,"Initializing filesystem drivers...\n");
     
     /* Initialize virtual filesystem layer */
     vfs_init();
@@ -38,5 +38,5 @@ void fs_built_in_init(void) {
     /* Initialize storage drivers */
     fs_storage_init();
     
-    printk("[    0.000170] Filesystem drivers initialized\n");
+    printk(T,"Filesystem drivers initialized\n");
 }

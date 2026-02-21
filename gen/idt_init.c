@@ -33,12 +33,12 @@ extern void int80_syscall_stub(void);
  * Initialize IDT with int 0x80 syscall handler
  */
 void idt_init(void) {
-    printk("[idt_init] Initializing IDT for int 0x80 syscalls\n");
+    printk(T,"Initializing IDT for int 0x80 syscalls\n");
     
     idt_entry_t *entry = &g_idt[0x80];
     u32 handler = (u32)&int80_syscall_stub;
     
-    printk("[idt_init] Handler: 0x%x, Entry: 0x%x\n", handler, (u32)entry);
+    printk(T,"Handler: 0x%x, Entry: 0x%x\n", handler, (u32)entry);
     
     /* Set IDT entry for int 0x80 */
     entry->offset_low = (u16)(handler & 0xFFFF);
@@ -47,11 +47,11 @@ void idt_init(void) {
     entry->reserved = 0;
     entry->type_attr = 0xEE; /* Interrupt gate, ring 3 (all privileges) */
     
-    printk("[idt_init] IDT entry: low=0x%x high=0x%x sel=0x%x attr=0x%x\n",
+    printk(T,"IDT entry: low=0x%x high=0x%x sel=0x%x attr=0x%x\n",
            entry->offset_low, entry->offset_high, entry->selector, entry->type_attr);
     
     /* Load IDT */
     __asm__ __volatile__("lidt %0" :: "m" (g_idt_desc));
     
-    printk("[idt_init] IDT loaded, ready for int 0x80\n");
+    printk(T,"IDT loaded, ready for int 0x80\n");
 }

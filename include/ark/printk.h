@@ -21,4 +21,10 @@
  /* Serial input functions */
  bool serial_has_input(void);
  u8 serial_getc(void);
- 
+ int printc(u8 color,const char*fmt, ...); 
+
+extern const char *_PRINTK_T_SENTINEL;
+#define T _PRINTK_T_SENTINEL
+
+void tsc_calibrate(void);
+void tsc_set_hz(u32 ticks_per_us);

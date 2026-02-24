@@ -1,0 +1,4 @@
+Mod probe or mp for short
+
+-this is used to develop kernel level mods for the os devs so it can varry based on user or developer
+-devices scanner are mod probes soon this kind of files will be transferred to a structured init system

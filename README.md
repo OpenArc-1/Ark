@@ -71,7 +71,3 @@ We welcome contributions to help Ark reach full 64-bit stability.
 ---
 
 ```
-
-
-
-**Would you like me to generate a `.gitignore` now to make sure your build objects (like `.o` files) don't clutter your new clean repo?**

@@ -11,8 +11,8 @@
  * ============================================================ */
 
 #include <ark/printk.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include "ark/types.h"
+
 
 /* ── PCI port I/O addresses (standard x86 config mechanism #1) ── */
 #define PCI_CONFIG_ADDRESS   0xCF8
@@ -54,14 +54,14 @@ typedef enum {
 
 /* ── A single scanned audio device entry ─────────────────────── */
 typedef struct {
-    uint8_t         bus;
-    uint8_t         slot;
-    uint8_t         func;
-    uint16_t        vendor_id;
-    uint16_t        device_id;
-    uint8_t         pci_class;
-    uint8_t         pci_subclass;
-    uint32_t        bar0;           /* Base Address Register 0      */
+    u8         bus;
+    u8         slot;
+    u8         func;
+    u16        vendor_id;
+    u16        device_id;
+    u8         pci_class;
+    u8         pci_subclass;
+    u32        bar0;           /* Base Address Register 0      */
     driver_status_t driver;
     bool            in_use;         /* activated via use_device()   */
     const char*     driver_name;
@@ -71,9 +71,9 @@ typedef struct {
 /* ── Scanner result ───────────────────────────────────────────── */
 typedef struct {
     audio_device_t  devices[AUDIO_SCANNER_MAX_DEVICES];
-    uint32_t        count;          /* total devices found          */
-    uint32_t        supported;      /* devices with known drivers   */
-    uint32_t        unsupported;    /* "no relevant driver found"   */
+    u32        count;          /* total devices found          */
+    u32        supported;      /* devices with known drivers   */
+    u32        unsupported;    /* "no relevant driver found"   */
 } audio_scan_result_t;
 
 /* ── Public API ───────────────────────────────────────────────── */
@@ -91,7 +91,7 @@ int audio_scanner_run(audio_scan_result_t* result);
  *   Sets device->in_use = true and initialises its BAR.
  *   Returns false if index invalid or driver unsupported.
  */
-bool audio_scanner_use_device(audio_scan_result_t* result, uint32_t index);
+bool audio_scanner_use_device(audio_scan_result_t* result, u32 index);
 
 /*
  * audio_scanner_print_report(result)

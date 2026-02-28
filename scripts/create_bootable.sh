@@ -1,5 +1,5 @@
 #!/bin/bash
-# pack-init.sh - Create bootable Ark OS disk with init.bin included
+# pack-init.sh - Create bootable Ark kernel disk with init.bin included
 
 set -e
 
@@ -50,7 +50,7 @@ cat << 'EOF' | sudo tee "$MOUNTPOINT/boot/grub/grub.cfg" >/dev/null
 set timeout=5
 set default=0
 
-menuentry "Ark OS with init.bin" {
+menuentry "Ark kernel with init.bin" {
     multiboot /bzImage
     module /init
 }

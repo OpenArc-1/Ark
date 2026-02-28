@@ -48,6 +48,7 @@ void get_cpu_vendor(char* out) {
 
 /* ---------------- SYSTEM INFO DISPLAY ---------------- */
 
+#if !defined(CONFIG_64BIT) || !CONFIG_64BIT
 void show_sysinfo_bios(void) {
     // Read BIOS memory block
     u16 conv_mem = *(u16*)(BIOS_DATA + 0);
@@ -96,3 +97,11 @@ void show_sysinfo_bios(void) {
 
     printk(T,"System ready.\n");
 }
+
+#else
+/* 64-bit stub: BIOS data area not available in long mode */
+void show_sysinfo_bios(void) {
+    /* no-op in 64-bit builds */
+}
+#endif /* CONFIG_64BIT */
+

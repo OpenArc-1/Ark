@@ -103,6 +103,22 @@ u32 ramfs_get_file_count(void);
  */
 u8 ramfs_get_file_by_index(u32 index, char *out_filename, u8 **out_data, u32 *out_size);
 
+/* helper for log subsystem or other kernel code to adjust an existing file */
+/**
+ * Update the size of an already-added ramfs file.  The caller is
+ * responsible for growing the backing buffer if necessary; this
+ * function only adjusts the metadata and will return false if the
+ * named file does not exist.
+ */
+u8 ramfs_set_file_size(const char *filename, u32 size);
+
+/**
+ * Replace the data pointer (and size) for an existing file.  Useful if
+ * the caller has moved the buffer to a larger allocation but still
+ * wants the ramfs entry to reference the new pointer.
+ */
+u8 ramfs_set_file_data(const char *filename, u8 *data, u32 size);
+
 u8  ramfs_mkdir(const char *path);
 u8  ramfs_mknod(const char *path, u32 type, u32 major, u32 minor);
 u8  ramfs_dir_exists(const char *path);

@@ -1,48 +1,36 @@
-// mem.c
-#include <stdint.h>
-#include <stddef.h>
+/**
+ * mem/mem.c - Architecture-independent memory utilities for Ark kernel
+ * Works for both 32-bit and 64-bit builds.
+ */
+#include "ark/types.h"
 
-void *memcpy(void *dest, const void *src, size_t n) {
-    uint8_t *d = (uint8_t*)dest;
-    const uint8_t *s = (const uint8_t*)src;
-
-    for (size_t i = 0; i < n; i++)
-        d[i] = s[i];
-
+void *memcpy(void *dest, const void *src, u32 n) {
+    u8 *d = (u8 *)dest;
+    const u8 *s = (const u8 *)src;
+    for (u32 i = 0; i < n; i++) d[i] = s[i];
     return dest;
 }
 
-void *memset(void *dest, int val, size_t n) {
-    uint8_t *d = (uint8_t*)dest;
-
-    for (size_t i = 0; i < n; i++)
-        d[i] = (uint8_t)val;
-
+void *memset(void *dest, int val, u32 n) {
+    u8 *d = (u8 *)dest;
+    for (u32 i = 0; i < n; i++) d[i] = (u8)val;
     return dest;
 }
 
-void *memmove(void *dest, const void *src, size_t n) {
-    uint8_t *d = (uint8_t*)dest;
-    const uint8_t *s = (const uint8_t*)src;
-
-    if (d < s) {
-        for (size_t i = 0; i < n; i++)
-            d[i] = s[i];
-    } else {
-        for (size_t i = n; i != 0; i--)
-            d[i-1] = s[i-1];
-    }
-
+void *memmove(void *dest, const void *src, u32 n) {
+    u8 *d = (u8 *)dest;
+    const u8 *s = (const u8 *)src;
+    if (d < s)
+        for (u32 i = 0; i < n; i++) d[i] = s[i];
+    else
+        for (u32 i = n; i > 0; i--) d[i-1] = s[i-1];
     return dest;
 }
 
-int memcmp(const void *a, const void *b, size_t n) {
-    const uint8_t *x = (const uint8_t*)a;
-    const uint8_t *y = (const uint8_t*)b;
-
-    for (size_t i = 0; i < n; i++) {
-        if (x[i] != y[i])
-            return x[i] - y[i];
-    }
+int memcmp(const void *a, const void *b, u32 n) {
+    const u8 *x = (const u8 *)a;
+    const u8 *y = (const u8 *)b;
+    for (u32 i = 0; i < n; i++)
+        if (x[i] != y[i]) return (int)x[i] - (int)y[i];
     return 0;
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Ark OS Disk Image Creator with init.bin
+Ark kernel Disk Image Creator with init.bin
 
 Creates a bootable FAT32 disk image with:
 - /bin directory containing init.bin
@@ -120,11 +120,11 @@ def create_fat32_disk(output_image, size_mb, kernel_path, init_bin_path):
                 os.makedirs(os.path.join(mount_point, "boot", "grub"), exist_ok=True)
                 
                 # Create grub.cfg
-                grub_cfg = """# GRUB2 boot configuration for Ark OS
+                grub_cfg = """# GRUB2 boot configuration for Ark kernel
 
-menuentry 'Ark OS' {
+menuentry 'Ark kernel' {
     multiboot /bzImage
-    echo "Booting Ark OS kernel..."
+    echo "Booting Ark kernel kernel..."
 }
 
 set timeout=5

@@ -1,5 +1,0 @@
-#!init
-# Demo init script for Ark kernel
-# This script tells the kernel to load and execute /init.bin
-
-file:/init.bin

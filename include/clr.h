@@ -2,6 +2,7 @@
 
 #ifndef CLR_H
 #define CLR_H
+#include "ark/types.h"
 
 /* * VGA 4-bit Color Indices
  * Standard intensity (0-7) and High intensity (8-15)
@@ -29,9 +30,9 @@
 
 /*
  * Helper Macro for Text Mode Attribute Bytes
- * usage: uint8_t attr = CLR_ATTR(CLR_BLUE, CLR_LIGHTRED);
+ * usage: u8 attr = CLR_ATTR(CLR_BLUE, CLR_LIGHTRED);
  * Result: 0x1C (Light Red text on Blue background)
  */
-#define CLR_ATTR(bg, fg) (uint8_t)(((bg & 0x0F) << 4) | (fg & 0x0F))
+#define CLR_ATTR(bg, fg) (u8)(((bg & 0x0F) << 4) | (fg & 0x0F))
 
 #endif // CLR_H

@@ -5,17 +5,17 @@
 #ifndef DISK_SCANNER_H
 #define DISK_SCANNER_H
 
-#include <stdint.h>
+#include "ark/types.h"
 
 typedef struct {
-    uint8_t  drive;           /* 0x80 = first HDD, 0x81 = second, etc.     */
-    uint32_t sectors_lo;      /* low  32 bits of total LBA sector count    */
-    uint32_t sectors_hi;      /* high 32 bits of total LBA sector count    */
-    uint32_t total_mb;        /* Total size in megabytes                   */
-    uint32_t total_gb_int;    /* GB integer part                           */
-    uint32_t total_gb_frac;   /* GB fractional part (tenths: 0-9)          */
-    uint8_t  method;          /* 1 = INT 13h extended, 2 = CHS fallback    */
-    uint8_t  valid;           /* 1 if this entry contains valid data       */
+    u8  drive;           /* 0x80 = first HDD, 0x81 = second, etc.     */
+    u32 sectors_lo;      /* low  32 bits of total LBA sector count    */
+    u32 sectors_hi;      /* high 32 bits of total LBA sector count    */
+    u32 total_mb;        /* Total size in megabytes                   */
+    u32 total_gb_int;    /* GB integer part                           */
+    u32 total_gb_frac;   /* GB fractional part (tenths: 0-9)          */
+    u8  method;          /* 1 = INT 13h extended, 2 = CHS fallback    */
+    u8  valid;           /* 1 if this entry contains valid data       */
 } DiskInfo;
 
 /**
@@ -25,7 +25,7 @@ typedef struct {
  * @param info   Pointer to DiskInfo structure to fill
  * @return       1 on success, 0 if drive not present
  */
-int scan_disk(uint8_t drive, DiskInfo *info);
+int scan_disk(u8 drive, DiskInfo *info);
 
 /**
  * scan_all_disk - Scan drives 0x80-0x8F, stop at first failure

@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------
-# Ark OS Build System - Multi-Architecture Support (x86/x86_64, 32/64-bit)
+# Ark kernel Build System - Multi-Architecture Support (x86/x86_64, 32/64-bit)
 # Minimal Linux-style output
 # -------------------------------------------------------------------
 # Kernel INFO
@@ -31,6 +31,11 @@ NCURSES_LIB  ?= -lncurses
 
 # Load menuconfig-generated variables (ARCH, BITS, etc) if present
 -include .kconfig
+
+# Allow .kconfig QEMU_* keys to override Makefile defaults
+ifneq ($(QEMU_RAM_MB_KCONF),)
+  QEMU_RAM_MB := $(QEMU_RAM_MB_KCONF)
+endif
 
 # Build options
 DEBUG       ?= 0
@@ -95,12 +100,22 @@ ifeq ($(WERROR),1)
   WARN_CFLAGS += -Werror
 endif
 
-CFLAGS := -m32 -fno-pic -fno-pie -std=gnu99 -ffreestanding \
+ifeq ($(ARCH),x86_64)
+  MARCH_FLAG := -m64
+  LINKER_SCRIPT := arch/x86_64/linker64.ld
+  ARCH_DEFINES := -DCONFIG_64BIT=1 -DBITS=64 -DARK_BITS=64
+else
+  MARCH_FLAG := -m32
+  LINKER_SCRIPT := linker.ld
+  ARCH_DEFINES := -DARK_BITS=32
+endif
+
+CFLAGS := $(MARCH_FLAG) $(ARCH_DEFINES) -fno-pic -fno-pie -std=gnu99 -ffreestanding \
           $(OPT_CFLAGS) $(WARN_CFLAGS) -I$(KERNEL_INC) $(EXTRA_CFLAGS) -Wno-unused-function -Wno-unused-variable -Wno-inplicit-function-declaration \
 		    -w -Wno-error=implicit-function-declaration \
 
 
-LDFLAGS := -m32 -nostdlib -nostartfiles -no-pie $(EXTRA_LDFLAGS)
+LDFLAGS := $(MARCH_FLAG) -nostdlib -nostartfiles -no-pie $(EXTRA_LDFLAGS)
 
 # QEMU base flags
 QEMU_FLAGS := -m $(QEMU_RAM_MB)M
@@ -122,12 +137,14 @@ QEMU_FLAGS += $(QEMU_EXTRA)
 # Sources
 # -------------------------------------------------------------------
 
+# kernel sources; exclude userland helpers like strapper
 SRCS := $(wildcard gen/*.c) \
         $(wildcard fb/*.c) \
         $(wildcard fs/*.c) \
         $(wildcard hid/*.c) \
         $(wildcard io/*.c) \
         $(wildcard ks/*.c) \
+        $(filter-out ks/dkmload/strapper.c,$(wildcard ks/dkmload/*.c)) \
         $(wildcard mem/*.c) \
         $(wildcard mp/*.c) \
         $(wildcard usb/*.c) \
@@ -135,7 +152,13 @@ SRCS := $(wildcard gen/*.c) \
         $(wildcard arch/$(ARCH)/*.c)\
 	    $(wildcard mm/*c) \
 		$(wildcard gpu/*c)
-NASMSRCS := mp/bios.S
+# mp/bios.S is 16-bit real-mode BIOS code — only valid for 32-bit builds.
+# In pure 64-bit (long mode) builds BIOS interrupts are unavailable, so exclude it.
+ifeq ($(ARCH),x86_64)
+  NASMSRCS :=
+else
+  NASMSRCS := mp/bios.S
+endif
 GASSRCS  := $(wildcard arch/$(ARCH)/*.S)
 # Map all .o paths into compiled/
 OBJS         := $(patsubst %,$(OBJDIR)/%,$(SRCS:.c=.o) $(NASMSRCS:.S=.o) $(GASSRCS:.S=.o))
@@ -144,9 +167,9 @@ OBJS         := $(patsubst %,$(OBJDIR)/%,$(SRCS:.c=.o) $(NASMSRCS:.S=.o) $(GASSR
 # -------------------------------------------------------------------
 
 .PHONY: all clean run run-disk run-disk-with-fs run-nographic run-with-demo-script run-with-zip run-with-zip-nographic libark init
- .PHONY: menuconfig kconfig
+ .PHONY: menuconfig kconfig defconfig tinyconfig allyes allno
 
-all: bzImage
+all: ArkImage
 ifneq ($(BUILD_INIT),0)
 all: init
 endif
@@ -166,6 +189,27 @@ menuconfig: $(KCONFIG_TOOL)
 	@$(KCONFIG_TOOL)
 	@$(PYTHON) scripts/gen_kconfig_h.py $(KCONFIG_IN) $(KCONFIG_HEADER)
 
+# Preset configurations (no interactive menu needed)
+defconfig: $(KCONFIG_TOOL)
+	@printf "  PRESET  defconfig\n"
+	@$(KCONFIG_TOOL) --defconfig
+	@$(PYTHON) scripts/gen_kconfig_h.py $(KCONFIG_IN) $(KCONFIG_HEADER)
+
+tinyconfig: $(KCONFIG_TOOL)
+	@printf "  PRESET  tinyconfig\n"
+	@$(KCONFIG_TOOL) --tinyconfig
+	@$(PYTHON) scripts/gen_kconfig_h.py $(KCONFIG_IN) $(KCONFIG_HEADER)
+
+allyes: $(KCONFIG_TOOL)
+	@printf "  PRESET  allyes\n"
+	@$(KCONFIG_TOOL) --allyes
+	@$(PYTHON) scripts/gen_kconfig_h.py $(KCONFIG_IN) $(KCONFIG_HEADER)
+
+allno: $(KCONFIG_TOOL)
+	@printf "  PRESET  allno\n"
+	@$(KCONFIG_TOOL) --allno
+	@$(PYTHON) scripts/gen_kconfig_h.py $(KCONFIG_IN) $(KCONFIG_HEADER)
+
 kconfig: $(KCONFIG_HEADER)
 
 $(KCONFIG_HEADER): scripts/gen_kconfig_h.py $(KCONFIG_IN)
@@ -175,7 +219,7 @@ $(KCONFIG_HEADER): scripts/gen_kconfig_h.py $(KCONFIG_IN)
 # ------------------------
 # Userspace init (init.bin)
 # ------------------------
-ARK_GCC ?= ark-gcc/ark-gcc
+ACC ?= ark-gcc
 
 libark:
 	@$(MAKE) -C ark-gcc libark
@@ -192,18 +236,39 @@ userspace/ark_crt0.o: userspace/ark_crt0.S
 
 init: userspace/init.c userspace/ark_crt0.o | libark
 	@printf "  CC      userspace/init.c\n"
-	@$(CC) -m32 -ffreestanding -fno-pic -fno-pie -nostdlib -std=gnu99 \
+	@$(ACC) -m32 -ffreestanding -fno-pic -fno-pie -nostdlib -std=gnu99 \
 	  $(INIT_CFLAGS) -Iark-gcc/include -c userspace/init.c -o userspace/init.o
 	@printf "  LD      %s\n" $@
 	@$(CC) -m32 -nostdlib -no-pie -T userspace/linker.ld \
 	  -o $@ userspace/ark_crt0.o userspace/init.o ark-gcc/libark/build/libark.a
 
 # ------------------------
+# Dynamic module tools (userspace programs)
+# ------------------------
+# strapper is a tiny userspace loader that issues SYS_DKM_* calls.
+strapper.elf: ks/dkmload/strapper.c
+	@printf "  CC      ks/dkmload/strapper.c\n"
+	@$(ACC) -m32 -ffreestanding -nostdlib -std=gnu99 \
+	  -Iark-gcc/include -c ks/dkmload/strapper.c -o ks/dkmload/strapper.o
+	@printf "  LD      %s\n" $@
+	@$(ACC) -m32 -nostdlib -no-pie -o $@ ks/dkmload/strapper.o
+
+# sample module compiled by users with ark-gcc; uses same flags as init
+sample_module.elf: ks/dkmload/sample_module.c
+	@printf "  CC      sample_module.c\n"
+	@$(ACC) -m32 -ffreestanding -nostdlib -std=gnu99 \
+	  -Iark-gcc/include -c ks/dkmload/sample_module.c -o ks/dkmload/sample_module.o
+	@printf "  LD      %s\n" $@
+	@$(ACC) -m32 -nostdlib -no-pie -o $@ ks/dkmload/sample_module.o
+
+
+# ------------------------
 # Kernel build
 # ------------------------
-bzImage: linker.ld $(OBJS)
+
+ArkImage: $(LINKER_SCRIPT) $(OBJS)
 	@printf "  LD      %s\n" $@
-	@$(CC) $(LDFLAGS) -T linker.ld -o $@ $(OBJS)
+	@$(CC) $(LDFLAGS) -T $(LINKER_SCRIPT) -o $@ $(OBJS)
 	@printf "Kernel built: %s\n" $@
 
 # ------------------------
@@ -223,16 +288,20 @@ $(OBJDIR)/%.o: %.c $(KCONFIG_HEADER)
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 # NASM assembly
+NASM_FORMAT := $(if $(filter x86_64,$(ARCH)),elf64,elf32)
 $(OBJDIR)/mp/%.o: mp/%.S
 	@mkdir -p $(dir $@)
 	@printf "  AS      %s\n" $@
-	@$(NASM) -f elf32 $< -o $@
+	@$(NASM) -f $(NASM_FORMAT) $< -o $@
+
+# GAS bit-width flag: --64 for x86_64, --32 otherwise
+GAS_BITS := $(if $(filter x86_64,$(ARCH)),--64,--32)
 
 # GAS assembly (arch)
 $(OBJDIR)/arch/$(ARCH)/%.o: arch/$(ARCH)/%.S
 	@mkdir -p $(dir $@)
 	@printf "  AS      %s\n" $@
-	@$(AS) --32 -o $@ $<
+	@$(AS) $(GAS_BITS) -o $@ $<
 
 # GAS assembly (userspace)
 $(OBJDIR)/userspace/%.o: userspace/%.S
@@ -244,7 +313,7 @@ $(OBJDIR)/userspace/%.o: userspace/%.S
 # Clean
 # ------------------------
 clean:
-	rm -rf $(OBJDIR) bzImage init.bin init \
+	rm -rf $(OBJDIR) ArkImage init.bin init installer installer.img \
 	      userspace/init.o userspace/ark_crt0.o \
 	      $(DISK_IMAGE) $(DISK_FS_IMAGE) disk-with-init.img
 	@echo ":: Cleaned"
@@ -252,11 +321,11 @@ clean:
 # ------------------------
 # Disk images
 # ------------------------
-disk.img: bzImage
-	@$(PYTHON) scripts/create_bootable_image.py bzImage $(DISK_IMAGE) $(DISK_SIZE_MB)
+disk.img: ArkImage
+	@$(PYTHON) scripts/create_bootable_image.py ArkImage $(DISK_IMAGE) $(DISK_SIZE_MB)
 
-disk-with-fs.img: bzImage 
-	@$(PYTHON) scripts/create_disk_with_init.py bzImage init.bin $(DISK_FS_IMAGE) $(DISK_SIZE_MB)
+disk-with-fs.img: ArkImage 
+	@$(PYTHON) scripts/create_disk_with_init.py ArkImage init.bin $(DISK_FS_IMAGE) $(DISK_SIZE_MB)
 
 # ------------------------
 # QEMU targets
@@ -267,33 +336,46 @@ disk-with-fs.img: bzImage
 # -vga std enables the Bochs VGA adapter (BGA) in QEMU.
 # The kernel writes BGA I/O ports 0x01CE/0x01CF to switch to 1024x768x32
 # from protected mode -- no BIOS calls needed.
-run: bzImage
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -vga std
+run: ArkImage
+	$(QEMU) $(QEMU_FLAGS) -kernel ArkImage -vga std -serial stdio
 
-run-vesa: bzImage
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -vga std -serial stdio
+run-vesa: ArkImage
+	$(QEMU) $(QEMU_FLAGS) -kernel ArkImage -vga std -serial stdio
+
+# Build FAT16 disk image with INIT script + INSTALLER ELF
+# This is the recommended way to boot the installer.
+# The disk_init.c loader reads INIT -> /init and INSTALLER -> /installer.
+installer-disk: installer
+	@bash scripts/make_installer_disk.sh installer.img
+
+# Run the installer disk image in QEMU
+run-installer: ArkImage installer-disk
+	$(QEMU) $(QEMU_FLAGS) -kernel ArkImage -vga std -serial stdio \
+	  -drive file=installer.img,format=raw,if=ide,index=0 \
+	  -device ps2-mouse \
+	  -m 256M
 
 # Attach any disk image containing a .init script.
 # Usage: make run-with-disk DISK=test.img
 #        make run-with-disk DISK=myfs.img
 # The kernel will scan ATA bus 0 drive 0 for FAT16/FAT32 and load the INIT file.
 DISK ?= test.img
-run-with-disk: bzImage
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -vga std \
+run-with-disk: ArkImage
+	$(QEMU) $(QEMU_FLAGS) -kernel ArkImage -vga std \
 	  -drive file=$(DISK),format=raw,if=ide,index=0
 
-run-disk: bzImage $(DISK_IMAGE)
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=$(DISK_IMAGE),format=raw
+run-disk: ArkImage $(DISK_IMAGE)
+	$(QEMU) $(QEMU_FLAGS) -kernel ArkImage -drive file=$(DISK_IMAGE),format=raw
 
-run-disk-with-fs: bzImage $(DISK_FS_IMAGE)
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -drive file=$(DISK_FS_IMAGE),format=raw -full-screen
+run-disk-with-fs: ArkImage $(DISK_FS_IMAGE)
+	$(QEMU) $(QEMU_FLAGS) -kernel ArkImage -drive file=$(DISK_FS_IMAGE),format=raw -full-screen
 
-run-nographic: bzImage
-	$(QEMU) $(QEMU_FLAGS) -nographic -kernel bzImage
+run-nographic: ArkImage
+	$(QEMU) $(QEMU_FLAGS) -nographic -kernel ArkImage
 
-run-with-demo-script: bzImage $(DEMO_SCRIPT)
+run-with-demo-script: ArkImage $(DEMO_SCRIPT)
 	@echo "[*] Running with demo script: $(DEMO_SCRIPT)"
-	$(QEMU) $(QEMU_FLAGS) -nographic -kernel bzImage "$(DEMO_SCRIPT)"
+	$(QEMU) $(QEMU_FLAGS) -nographic -kernel ArkImage "$(DEMO_SCRIPT)"
 
 # ZIP initramfs variable
 INITRAMFS_ZIP ?= initramfs.zip
@@ -309,13 +391,13 @@ initramfs.zip: $(INIT_BIN)
 
 # Run with ZIP initramfs: QEMU -kernel + -initrd passes the ZIP as mods[0]
 # The kernel detects PK magic, calls zip_load_into_ramfs(), finds /init
-run-with-zip: bzImage $(INITRAMFS_ZIP)
+run-with-zip: ArkImage $(INITRAMFS_ZIP)
 	@echo "[*] Running with ZIP initramfs: $(INITRAMFS_ZIP)"
-	$(QEMU) $(QEMU_FLAGS) -kernel bzImage -initrd $(INITRAMFS_ZIP) -vga std
+	$(QEMU) $(QEMU_FLAGS) -kernel ArkImage -initrd $(INITRAMFS_ZIP) -vga std
 
-run-with-zip-nographic: bzImage $(INITRAMFS_ZIP)
+run-with-zip-nographic: ArkImage $(INITRAMFS_ZIP)
 	@echo "[*] Running with ZIP initramfs (nographic): $(INITRAMFS_ZIP)"
-	$(QEMU) $(QEMU_FLAGS) -nographic -kernel bzImage -initrd $(INITRAMFS_ZIP)
+	$(QEMU) $(QEMU_FLAGS) -nographic -kernel ArkImage -initrd $(INITRAMFS_ZIP)
 
 # Run with a custom ZIP: make run-with-zip INITRAMFS_ZIP=myfs.zip
 
@@ -333,13 +415,18 @@ help:
 	@echo "  DISK_SIZE_MB DISK_IMAGE DISK_FS_IMAGE | DEMO_SCRIPT | KERNEL_INC EXTRA_CFLAGS EXTRA_LDFLAGS"
 	@echo ""
 	@echo "Targets:"
+	@echo "  menuconfig           Interactive kernel configuration (ncurses)"
+	@echo "  defconfig            Apply recommended x86_64 defaults"
+	@echo "  tinyconfig           Apply minimal x86 32-bit config"
+	@echo "  allyes               Enable every feature"
+	@echo "  allno                Disable everything (bare minimum)"
 	@echo "  all                  Build kernel (+ init.bin if BUILD_INIT=1)"
-	@echo "  bzImage              Kernel ELF"
+	@echo "  ArkImage              Kernel ELF"
 	@echo "  init.bin             Userspace init (if BUILD_INIT=1)"
 	@echo "  disk.img             Bootable disk ($(DISK_IMAGE))"
 	@echo "  disk-with-fs.img     FAT32 disk with init ($(DISK_FS_IMAGE))"
 	@echo "  clean                Remove build artifacts"
-	@echo "  run                  QEMU -kernel bzImage"
+	@echo "  run                  QEMU -kernel ArkImage"
 	@echo "  run-disk             QEMU + disk"
 	@echo "  run-disk-with-fs     QEMU + FAT32 disk"
 	@echo "  run-nographic        QEMU -nographic"

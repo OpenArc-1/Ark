@@ -1,6 +1,8 @@
-// ip.c - Real IP networking stack for Ark OS with e1000 driver
+#include "ark/types.h"
+// ip.c - Real IP networking stack for Ark kernel with e1000 driver
 
 #include "ark/ip.h"
+#include "ark/net.h"           /* generic network driver interface */
 #include "ark/e1000.h"
 #include "ark/printk.h"
 #include "ark/mem.h"
@@ -13,56 +15,58 @@
 
 // Ethernet frame header
 typedef struct {
-    uint8_t dest_mac[6];
-    uint8_t src_mac[6];
-    uint16_t type;
+    u8 dest_mac[6];
+    u8 src_mac[6];
+    u16 type;
 } eth_hdr_t;
 
 // ARP packet
 typedef struct {
-    uint16_t hw_type;       // Hardware type (1 = Ethernet)
-    uint16_t proto_type;    // Protocol type (0x0800 = IPv4)
-    uint8_t hw_addr_len;    // Hardware address length (6 for Ethernet)
-    uint8_t proto_addr_len; // Protocol address length (4 for IPv4)
-    uint16_t opcode;        // Operation (1 = request, 2 = reply)
-    uint8_t src_mac[6];
-    uint32_t src_ip;
-    uint8_t dest_mac[6];
-    uint32_t dest_ip;
+    u16 hw_type;       // Hardware type (1 = Ethernet)
+    u16 proto_type;    // Protocol type (0x0800 = IPv4)
+    u8 hw_addr_len;    // Hardware address length (6 for Ethernet)
+    u8 proto_addr_len; // Protocol address length (4 for IPv4)
+    u16 opcode;        // Operation (1 = request, 2 = reply)
+    u8 src_mac[6];
+    u32 src_ip;
+    u8 dest_mac[6];
+    u32 dest_ip;
 } arp_packet_t;
 
 // Global network configuration
 net_config_t g_net_config = {
     .local_ip = {0, 0, 0, 0},
-    .netmask = {255, 255, 255, 0},
+    .netmask = {0, 0, 0, 0},
     .gateway = {0, 0, 0, 0},
-    .dns = {8, 8, 8, 8},
-    .mac = {0x52, 0x54, 0x00, 0x12, 0x34, 0x56},
+    .dns = {0, 0, 0, 0},
+    .mac = {0}, /* will be filled by driver */
     .configured = 0
 };
 
-// DHCP state machine
+// DHCP state machine (not fully implemented)
 static int dhcp_state = 0;     // 0=idle, 1=discovering, 2=requesting, 3=bound
-static uint32_t dhcp_xid = 0;
-static uint32_t dhcp_server_ip __attribute__((unused)) = 0;
-static uint32_t dhcp_lease_time __attribute__((unused)) = 0;
+static u32 dhcp_xid = 0;
+static u32 dhcp_server_ip __attribute__((unused)) = 0;
+static u32 dhcp_lease_time __attribute__((unused)) = 0;
+
+// real implementations appear further down in the file (near ip_init)
 
 // ARP cache
 #define ARP_CACHE_SIZE 16
 static struct {
-    uint32_t ip;
-    uint8_t mac[6];
+    u32 ip;
+    u8 mac[6];
     int valid;
 } arp_cache[ARP_CACHE_SIZE];
 
-// Convert IP address to uint32_t
-uint32_t ip_to_uint32(ip_addr_t ip) {
-    return ((uint32_t)ip.a << 24) | ((uint32_t)ip.b << 16) | 
-           ((uint32_t)ip.c << 8) | (uint32_t)ip.d;
+// Convert IP address to u32
+u32 ip_to_uint32(ip_addr_t ip) {
+    return ((u32)ip.a << 24) | ((u32)ip.b << 16) | 
+           ((u32)ip.c << 8) | (u32)ip.d;
 }
 
-// Convert uint32_t to IP address
-ip_addr_t uint32_to_ip(uint32_t val) {
+// Convert u32 to IP address
+ip_addr_t u32o_ip(u32 val) {
     return (ip_addr_t){
         .a = (val >> 24) & 0xFF,
         .b = (val >> 16) & 0xFF,
@@ -96,17 +100,17 @@ void ip_set_static(ip_addr_t ip, ip_addr_t mask, ip_addr_t gateway) {
 }
 
 // Set MAC address
-void ip_set_mac(uint8_t *mac) {
+void ip_set_mac(u8 *mac) {
     memcpy(g_net_config.mac, mac, 6);
     printk(T,"[IP] MAC address set: %02x:%02x:%02x:%02x:%02x:%02x\n",
            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
 
 // Calculate IPv4 checksum (for future use)
-static uint16_t ipv4_checksum(void *data, int len) __attribute__((unused));
-static uint16_t ipv4_checksum(void *data, int len) {
-    uint32_t sum = 0;
-    uint16_t *ptr = (uint16_t *)data;
+static u16 ipv4_checksum(void *data, int len) __attribute__((unused));
+static u16 ipv4_checksum(void *data, int len) {
+    u32 sum = 0;
+    u16 *ptr = (u16 *)data;
     
     while (len > 1) {
         sum += *ptr++;
@@ -114,7 +118,7 @@ static uint16_t ipv4_checksum(void *data, int len) {
     }
     
     if (len)
-        sum += *(uint8_t *)ptr;
+        sum += *(u8 *)ptr;
     
     while (sum >> 16)
         sum = (sum & 0xFFFF) + (sum >> 16);
@@ -122,31 +126,27 @@ static uint16_t ipv4_checksum(void *data, int len) {
     return ~sum;
 }
 
-// Send ethernet frame via e1000
-static void eth_send(uint8_t *dest_mac, uint16_t type, void *payload, uint16_t payload_len) {
-    // Allocate buffer with space for Ethernet header
-    uint8_t frame_buf[2048];
+// Send ethernet frame via active network driver
+static void eth_send(u8 *dest_mac, u16 type, void *payload, u16 payload_len) {
+    u8 frame_buf[2048];
     eth_hdr_t *eth = (eth_hdr_t *)frame_buf;
-    uint8_t *frame_payload = frame_buf + sizeof(eth_hdr_t);
-    
-    // Build Ethernet header
+    u8 *frame_payload = frame_buf + sizeof(eth_hdr_t);
+
     memcpy(eth->dest_mac, dest_mac, 6);
     memcpy(eth->src_mac, g_net_config.mac, 6);
-    eth->type = ((type & 0xFF) << 8) | ((type >> 8) & 0xFF);  // Network byte order
-    
-    // Copy payload
+    eth->type = ((type & 0xFF) << 8) | ((type >> 8) & 0xFF);
+
     memcpy(frame_payload, payload, payload_len);
-    
-    // Send complete frame
-    e1000_send(frame_buf, sizeof(eth_hdr_t) + payload_len);
-    
+
+    net_send(frame_buf, sizeof(eth_hdr_t) + payload_len);
+
     printk(T,"[ETH] Sent frame to %02x:%02x:%02x:%02x:%02x:%02x (type: 0x%04x)\n",
            dest_mac[0], dest_mac[1], dest_mac[2], dest_mac[3], dest_mac[4], dest_mac[5], type);
 }
 
 // Lookup MAC address in ARP cache (for future use)
-static int arp_lookup(uint32_t ip, uint8_t *mac) __attribute__((unused));
-static int arp_lookup(uint32_t ip, uint8_t *mac) {
+static int arp_lookup(u32 ip, u8 *mac) __attribute__((unused));
+static int arp_lookup(u32 ip, u8 *mac) {
     for (int i = 0; i < ARP_CACHE_SIZE; i++) {
         if (arp_cache[i].valid && arp_cache[i].ip == ip) {
             memcpy(mac, arp_cache[i].mac, 6);
@@ -157,14 +157,14 @@ static int arp_lookup(uint32_t ip, uint8_t *mac) {
 }
 
 // Add entry to ARP cache
-static void arp_cache_add(uint32_t ip, uint8_t *mac) {
+static void arp_cache_add(u32 ip, u8 *mac) {
     for (int i = 0; i < ARP_CACHE_SIZE; i++) {
         if (!arp_cache[i].valid) {
             arp_cache[i].ip = ip;
             memcpy(arp_cache[i].mac, mac, 6);
             arp_cache[i].valid = 1;
             printk(T,"[ARP] Cache: ");
-            ip_print(uint32_to_ip(ip));
+            ip_print(u32o_ip(ip));
             printk(" -> %02x:%02x:%02x:%02x:%02x:%02x\n",
                    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
             return;
@@ -174,10 +174,10 @@ static void arp_cache_add(uint32_t ip, uint8_t *mac) {
 
 // Handle ARP request/reply
 static void arp_handle_packet(arp_packet_t *arp) {
-    uint16_t opcode = ((arp->opcode >> 8) & 0xFF) | ((arp->opcode & 0xFF) << 8);
+    u16 opcode = ((arp->opcode >> 8) & 0xFF) | ((arp->opcode & 0xFF) << 8);
     
     printk(T,"[ARP] Packet: opcode=%d, from ", opcode);
-    ip_print(uint32_to_ip(arp->src_ip));
+    ip_print(u32o_ip(arp->src_ip));
     printk("\n");
     
     // Cache the sender's MAC/IP mapping
@@ -187,7 +187,7 @@ static void arp_handle_packet(arp_packet_t *arp) {
     if (opcode == ARP_OPCODE_REQUEST && 
         arp->dest_ip == ip_to_uint32(g_net_config.local_ip)) {
         printk(T,"[ARP] Sending reply for ");
-        ip_print(uint32_to_ip(arp->dest_ip));
+        ip_print(u32o_ip(arp->dest_ip));
         printk("\n");
         
         // Build ARP reply
@@ -207,13 +207,13 @@ static void arp_handle_packet(arp_packet_t *arp) {
 }
 
 // Handle incoming IPv4 packet
-static void ipv4_handle_packet(ipv4_hdr_t *hdr, uint16_t payload_len) {
-    uint8_t protocol = hdr->protocol;
+static void ipv4_handle_packet(ipv4_hdr_t *hdr, u16 payload_len) {
+    u8 protocol = hdr->protocol;
     
     printk(T,"[IP] IPv4 packet: proto=%d, from ", protocol);
-    ip_print(uint32_to_ip(hdr->src_ip));
+    ip_print(u32o_ip(hdr->src_ip));
     printk(" to ");
-    ip_print(uint32_to_ip(hdr->dst_ip));
+    ip_print(u32o_ip(hdr->dst_ip));
     printk(" (len=%d)\n", payload_len);
     
     // Check if packet is for us
@@ -238,16 +238,16 @@ static void ipv4_handle_packet(ipv4_hdr_t *hdr, uint16_t payload_len) {
 }
 
 // Process incoming packet from e1000
-void ip_handle_packet(void *packet, uint16_t len) {
+void ip_handle_packet(void *packet, u16 len) {
     if (len < sizeof(eth_hdr_t)) {
         printk(T,"[IP] Packet too short\n");
         return;
     }
     
     eth_hdr_t *eth = (eth_hdr_t *)packet;
-    uint16_t type = ((eth->type >> 8) & 0xFF) | ((eth->type & 0xFF) << 8);
-    void *payload = (uint8_t *)packet + sizeof(eth_hdr_t);
-    uint16_t payload_len = len - sizeof(eth_hdr_t);
+    u16 type = ((eth->type >> 8) & 0xFF) | ((eth->type & 0xFF) << 8);
+    void *payload = (u8 *)packet + sizeof(eth_hdr_t);
+    u16 payload_len = len - sizeof(eth_hdr_t);
     
     if (type == ETHERNET_TYPE_ARP) {
         if (payload_len >= sizeof(arp_packet_t)) {
@@ -256,29 +256,29 @@ void ip_handle_packet(void *packet, uint16_t len) {
     } else if (type == ETHERNET_TYPE_IPV4) {
         if (payload_len >= sizeof(ipv4_hdr_t)) {
             ipv4_hdr_t *hdr = (ipv4_hdr_t *)payload;
-            uint8_t version = (hdr->version_ihl >> 4) & 0xF;
+            u8 version = (hdr->version_ihl >> 4) & 0xF;
             if (version == 4) {
-                uint16_t ihl = (hdr->version_ihl & 0xF) * 4;
-                uint16_t total_len = (hdr->total_length >> 8) | ((hdr->total_length & 0xFF) << 8);
-                uint16_t ip_payload_len = total_len - ihl;
+                u16 ihl = (hdr->version_ihl & 0xF) * 4;
+                u16 total_len = (hdr->total_length >> 8) | ((hdr->total_length & 0xFF) << 8);
+                u16 ip_payload_len = total_len - ihl;
                 ipv4_handle_packet(hdr, ip_payload_len);
             }
         }
     }
 }
 
-// Poll e1000 for incoming packets
+// Poll network driver for incoming packets
 void ip_poll(void) {
-    uint8_t buffer[2048];
-    int len = e1000_recv(buffer);
+    u8 buffer[2048];
+    int len = net_recv(buffer, sizeof(buffer));
     if (len > 0) {
         ip_handle_packet(buffer, len);
     }
 }
 
 // Send ARP request to resolve IP address (for future use)
-static void arp_request(uint32_t target_ip) __attribute__((unused));
-static void arp_request(uint32_t target_ip) {
+static void arp_request(u32 target_ip) __attribute__((unused));
+static void arp_request(u32 target_ip) {
     arp_packet_t arp;
     
     arp.hw_type = ((1 >> 8) & 0xFF) | ((1 & 0xFF) << 8);        // Ethernet
@@ -294,10 +294,10 @@ static void arp_request(uint32_t target_ip) {
     arp.dest_ip = target_ip;
     
     printk(T,"[ARP] Requesting ");
-    ip_print(uint32_to_ip(target_ip));
+    ip_print(u32o_ip(target_ip));
     printk("\n");
     
-    eth_send((uint8_t *)"\xFF\xFF\xFF\xFF\xFF\xFF", ETHERNET_TYPE_ARP, &arp, sizeof(arp));
+    eth_send((u8 *)"\xFF\xFF\xFF\xFF\xFF\xFF", ETHERNET_TYPE_ARP, &arp, sizeof(arp));
 }
 
 // DHCP: Send DISCOVER packet
@@ -345,24 +345,25 @@ int dhcp_poll(void) {
 void ip_init(void) {
     printk(T,"[IP] Initializing IP networking stack...\n");
     printk(T,"[IP] Version: IPv4\n");
-    
-    // Print MAC
-    printk(T,"[IP] MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
-           g_net_config.mac[0], g_net_config.mac[1],
-           g_net_config.mac[2], g_net_config.mac[3],
-           g_net_config.mac[4], g_net_config.mac[5]);
-    
-    // Clear ARP cache
+
+    /* initialize network drivers and pick one */
+    net_init_all();
+
+    /* ask driver for MAC address */
+    if (net_get_mac(g_net_config.mac) == 0) {
+        printk(T,"[IP] MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+               g_net_config.mac[0], g_net_config.mac[1],
+               g_net_config.mac[2], g_net_config.mac[3],
+               g_net_config.mac[4], g_net_config.mac[5]);
+    } else {
+        printk(T,"[IP] MAC address unknown\n");
+    }
+
+    /* Clear ARP cache */
     memset(arp_cache, 0, sizeof(arp_cache));
-    
-    // Use default static IP for now
-    // TODO: Implement full DHCP client for dynamic assignment
-    ip_addr_t default_ip = {192, 168, 1, 100};
-    ip_addr_t default_mask = {255, 255, 255, 0};
-    ip_addr_t default_gw = {192, 168, 1, 1};
-    
-    ip_set_static(default_ip, default_mask, default_gw);
-    
-    printk(T,"[IP] Stack ready - polling e1000 for packets\n");
-    g_net_config.configured = 1;
+
+    /* Do not assign static IP automatically; wait for user or DHCP */
+    g_net_config.configured = 0;
+
+    printk(T,"[IP] Stack ready\n");
 }

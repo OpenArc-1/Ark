@@ -11,7 +11,7 @@
 #include "ark/types.h"
 #include "ark/time.h"
 
-#define ARK_INIT_API_VERSION 2
+#define ARK_INIT_API_VERSION 3  /* bump for new log APIs */
 
 /* device node types for vfs_mknod */
 #define ARK_DEV_BLK  1   /* block device (sda)      */
@@ -28,6 +28,10 @@ typedef struct ark_kernel_api {
 
     /* Logging */
     int (*printk)(const char *fmt, ...);
+    /* optional kernel log capture - writes into a ramfs file */
+    void (*log_open)(const char *path);
+    void (*log_write)(const char *buf, u32 len);
+    void (*log_close)(void);
 
     /* Input */
     bool (*input_has_key)(void);

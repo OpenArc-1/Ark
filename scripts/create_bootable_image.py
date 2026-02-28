@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Ark OS Bootable Disk Image Generator
+Ark kernel Bootable Disk Image Generator
 
 Creates bootable disk images with:
 - MBR partitioning
@@ -49,11 +49,11 @@ def create_grub_config(kernel_path, output_dir):
     """Create GRUB2 configuration"""
     
     grub_cfg = f"""
-# GRUB2 boot configuration for Ark OS
+# GRUB2 boot configuration for Ark kernel
 
-menuentry 'Ark OS' {{
+menuentry 'Ark kernel' {{
     multiboot /bzImage
-    echo "Booting Ark OS kernel..."
+    echo "Booting Ark kernel kernel..."
 }}
 
 set timeout=5

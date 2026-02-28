@@ -9,6 +9,8 @@
  *   echo hello world      <- print a line
  *   printk some message   <- same as echo
  *   /bin/sh               <- load and run /bin/sh from ramfs
+ *   log:/foo.txt           <- capture subsequent printk/echo output into a
+ *                             ramfs-backed log file (visible to userspace)
  *
  * Called by the universal init executor in gen/init.c when a
  * /init file starts with "#!init".  Also scanned for any .init
@@ -21,6 +23,8 @@
 #include "ark/elf_loader.h"
 #include "ark/input.h"
 #include "ark/init_api.h"
+#include "ark/log.h"  /* support the log: command */
+#include "ark/dkm.h"  /* hook::dkm: support */
 
 void kbd_poll(void);
 bool kbd_is_initialized(void);
@@ -87,6 +91,80 @@ static u8 exec_line(const char *line) {
         if (kbd_is_initialized()) kbd_poll();
         int ec = elf_execute(data, sz, api);
         printk(T, "script: %s exited %d\n", path, ec);
+        return 1;
+    }
+
+    /* log:<path> -> capture subsequent printk output into a ramfs file */
+    if (starts_with(line, "log:")) {
+        const char *path = line + 4;
+        while (*path == ' ' || *path == '\t') path++;
+        if (!*path) {
+            api->printk("script: log: missing filename\n");
+            return 0;
+        }
+        log_open(path);
+        printk(T, "script: logging to %s\n", path);
+        return 1;
+    }
+
+    /* hook::dkm:<path>  -> load DKM module list from a file in ramfs
+     *
+     * The file is a simple INI-style config:
+     *
+     *   [Trigger]
+     *   <module-name>
+     *
+     *   [Action]
+     *   <dkm-path-1>
+     *   <dkm-path-2>
+     *   ...
+     *
+     * The [Trigger] section names the hook trigger (informational).
+     * The [Action] section lists ELF module paths to load via dkm_load().
+     */
+    if (starts_with(line, "hook::dkm:")) {
+        const char *cfg_path = line + 10; /* skip "hook::dkm:" */
+        while (*cfg_path == ' ' || *cfg_path == '\t') cfg_path++;
+        if (!*cfg_path) {
+            api->printk("script: hook::dkm: missing config path\n");
+            return 0;
+        }
+
+        u32 cfg_sz = 0;
+        u8 *cfg_data = ramfs_get_file(cfg_path, &cfg_sz);
+        if (!cfg_data || cfg_sz == 0) {
+            api->printk("script: hook::dkm: config not found: %s\n", cfg_path);
+            return 0;
+        }
+
+        printk(T, "script: hook::dkm: loading config %s\n", cfg_path);
+
+        /* Parse the INI file */
+        u32 pos = 0;
+        char ln[SCRIPT_MAX_LINE];
+        u8 in_action = 0;
+
+        while (pos < cfg_sz) {
+            u32 len = read_line(cfg_data, cfg_sz, &pos, ln, sizeof(ln));
+            if (len == 0 && pos >= cfg_sz) break;
+            char *s = ltrim(ln);
+            if (!*s || *s == '#') continue;
+
+            if (*s == '[') {
+                /* Section header */
+                const char *sec = s + 1;
+                in_action = starts_with(sec, "Action");
+                continue;
+            }
+
+            if (in_action) {
+                /* Each non-blank line under [Action] is a DKM path to load */
+                printk("script: hook::dkm: load %s\n", s);
+                int rc = dkm_load(s);
+                if (rc != 0)
+                    api->printk("script: hook::dkm: dkm_load(%s) failed\n", s);
+            }
+        }
         return 1;
     }
 

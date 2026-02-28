@@ -10,6 +10,11 @@
 #define SYS_PRINTK              3
 #define SYS_GET_FRAMEBUFFER     4
 
+/* dynamic kernel module loader syscalls (ks/dkmload) */
+#define SYS_DKM_LOAD            310    /* arg1 = path */
+#define SYS_DKM_UNLOAD          311    /* arg1 = module name */
+#define SYS_DKM_LIST            312    /* no args */
+
 /* Display server syscalls */
 #define SYS_GFX_CREATE_WINDOW   10
 #define SYS_GFX_DESTROY_WINDOW  11
@@ -36,10 +41,6 @@ static inline int read(int fd, char *buf, int count) {
 
 static inline int write(int fd, const char *buf, int count) {
     return syscall(SYS_WRITE, fd, (int)buf, count);
-}
-
-static inline void printk(const char *str) {
-    syscall(SYS_PRINTK, (int)str, 0, 0);
 }
 
 static inline void exit(int code) {

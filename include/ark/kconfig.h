@@ -16,98 +16,98 @@
 #define CONFIG_DEBUG       0
 #define CONFIG_WERROR      0
 #define CONFIG_INIT_BIN    "/init.bin"
-#define CONFIG_CODENAME    "tiny"
+#define CONFIG_CODENAME    "affectionate cat"
 
 /* ---- Printk / Serial ---- */
 #define CONFIG_PRINTK_ENABLE   1
-#define CONFIG_SERIAL_ENABLE   0
+#define CONFIG_SERIAL_ENABLE   1
 #define CONFIG_SERIAL_PORT     1016
-#define CONFIG_LOGLEVEL        2
+#define CONFIG_LOGLEVEL        4
 
 /* ---- Memory ---- */
 #define CONFIG_PMM_ENABLE      1
-#define CONFIG_VMM_ENABLE      0
-#define CONFIG_HEAP_SIZE_KB    512
-#define CONFIG_STACK_SIZE_KB   16
+#define CONFIG_VMM_ENABLE      1
+#define CONFIG_HEAP_SIZE_KB    4096
+#define CONFIG_STACK_SIZE_KB   64
 
 /* ---- Framebuffer ---- */
 #define CONFIG_FB_ENABLE   1
-#define CONFIG_FB_WIDTH    640
-#define CONFIG_FB_HEIGHT   480
+#define CONFIG_FB_WIDTH    1024
+#define CONFIG_FB_HEIGHT   768
 #define CONFIG_FB_BPP      32
 #define CONFIG_FB_DRIVER   "bga"
 
 /* ---- I/O ---- */
 #define CONFIG_PIO_ENABLE      1
 #define CONFIG_MMIO_ENABLE     1
-#define CONFIG_IOAPIC_ENABLE   0
+#define CONFIG_IOAPIC_ENABLE   1
 #define CONFIG_PIC_ENABLE      1
 
 /* ---- Interrupts ---- */
 #define CONFIG_IDT_ENABLE  1
-#define CONFIG_IRQ_STACK   0
-#define CONFIG_NMI_ENABLE  0
+#define CONFIG_IRQ_STACK   1
+#define CONFIG_NMI_ENABLE  1
 
 /* ---- USB ---- */
-#define CONFIG_USB_ENABLE  0
-#define CONFIG_USB_XHCI    0
-#define CONFIG_USB_EHCI    0
+#define CONFIG_USB_ENABLE  1
+#define CONFIG_USB_XHCI    1
+#define CONFIG_USB_EHCI    1
 #define CONFIG_USB_UHCI    0
-#define CONFIG_USB_HID     0
+#define CONFIG_USB_HID     1
 
 /* ---- Storage ---- */
 #define CONFIG_ATA_ENABLE    1
-#define CONFIG_SATA_ENABLE   0
-#define CONFIG_SD_ENABLE     0
+#define CONFIG_SATA_ENABLE   1
+#define CONFIG_SD_ENABLE     1
 #define CONFIG_FAT32_ENABLE  1
 #define CONFIG_RAMFS_ENABLE  1
 #define CONFIG_VFS_ENABLE    1
-#define CONFIG_ZIP_ENABLE    0
-#define CONFIG_ATA_DMA       0
+#define CONFIG_ZIP_ENABLE    1
+#define CONFIG_ATA_DMA       1
 
 /* ---- Networking ---- */
-#define CONFIG_NET_ENABLE    0
-#define CONFIG_E1000_ENABLE  0
+#define CONFIG_NET_ENABLE    1
+#define CONFIG_E1000_ENABLE  1
 #define CONFIG_E100_ENABLE   0
-#define CONFIG_IP_ENABLE     0
-#define CONFIG_UDP_ENABLE    0
+#define CONFIG_IP_ENABLE     1
+#define CONFIG_UDP_ENABLE    1
 #define CONFIG_TCP_ENABLE    0
 
 /* ---- Audio ---- */
-#define CONFIG_AUDIO_ENABLE  0
-#define CONFIG_AC97_ENABLE   0
+#define CONFIG_AUDIO_ENABLE  1
+#define CONFIG_AC97_ENABLE   1
 #define CONFIG_HDA_ENABLE    0
 
 /* ---- HID ---- */
 #define CONFIG_KBD_ENABLE    1
-#define CONFIG_MOUSE_ENABLE  0
+#define CONFIG_MOUSE_ENABLE  1
 #define CONFIG_TOUCH_ENABLE  0
 
 /* ---- GPU ---- */
 #define CONFIG_GPU_ENABLE    1
-#define CONFIG_VESA_ENABLE   0
+#define CONFIG_VESA_ENABLE   1
 
 /* ---- PCI ---- */
 #define CONFIG_PCI_ENABLE    1
-#define CONFIG_PCI_PROBE_ALL 0
+#define CONFIG_PCI_PROBE_ALL 1
 
 /* ---- Scheduler ---- */
-#define CONFIG_SCHED_ENABLE         0
-#define CONFIG_SCHED_PREEMPT        0
-#define CONFIG_SCHED_TIMESLICE_MS   0
+#define CONFIG_SCHED_ENABLE         1
+#define CONFIG_SCHED_PREEMPT        1
+#define CONFIG_SCHED_TIMESLICE_MS   10
 
 /* ---- Syscalls ---- */
 #define CONFIG_SYSCALL_ENABLE  1
-#define CONFIG_ELF_LOADER      0
+#define CONFIG_ELF_LOADER      1
 
 /* ---- Debugging ---- */
 #define CONFIG_DEBUG_VERBOSE    0
 #define CONFIG_DEBUG_KASAN      0
-#define CONFIG_DEBUG_PANIC_DUMP 0
+#define CONFIG_DEBUG_PANIC_DUMP 1
 
 /* ---- QEMU defaults (for Makefile passthrough) ---- */
-#define CONFIG_QEMU_RAM_MB     64
+#define CONFIG_QEMU_RAM_MB     256
 #define CONFIG_QEMU_SMP        1
-#define CONFIG_QEMU_NET        0
-#define CONFIG_QEMU_USB        0
+#define CONFIG_QEMU_NET        1
+#define CONFIG_QEMU_USB        1
 #define CONFIG_QEMU_NOGRAPHIC  0

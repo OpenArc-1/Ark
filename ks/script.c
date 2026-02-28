@@ -159,7 +159,7 @@ static u8 exec_line(const char *line) {
 
             if (in_action) {
                 /* Each non-blank line under [Action] is a DKM path to load */
-                printk("script: hook::dkm: load %s\n", s);
+                printk(T, "script: hook::dkm: load %s\n", s);
                 int rc = dkm_load(s);
                 if (rc != 0)
                     api->printk("script: hook::dkm: dkm_load(%s) failed\n", s);

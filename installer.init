@@ -1,0 +1,4 @@
+#!init
+echo Ark OS Installer
+echo Loading VESA framebuffer installer...
+file:/installer

@@ -111,7 +111,7 @@ else
 endif
 
 CFLAGS := $(MARCH_FLAG) $(ARCH_DEFINES) -fno-pic -fno-pie -std=gnu99 -ffreestanding \
-          $(OPT_CFLAGS) $(WARN_CFLAGS) -I$(KERNEL_INC) $(EXTRA_CFLAGS) -Wno-unused-function -Wno-unused-variable -Wno-inplicit-function-declaration \
+          $(OPT_CFLAGS) $(WARN_CFLAGS) -I$(KERNEL_INC) $(EXTRA_CFLAGS) -Wno-unused-function -Wno-unused-variable -Wno-implicit-function-declaration \
 		    -w -Wno-error=implicit-function-declaration \
 
 

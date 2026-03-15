@@ -1,0 +1,5 @@
+[Trigger]
+ast
+
+[Action]
+/usr/mods/ast_driver.elf

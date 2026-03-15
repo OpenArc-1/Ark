@@ -1,0 +1,3 @@
+#!init
+file:/path/to/binary
+hook::dkm:/path/to/module.ini

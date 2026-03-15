@@ -1,0 +1,16 @@
+{
+  "arch": "x86",
+  "cpu": "pentium",
+  "data-layout": "e-m:e-p:32:32-f64:32:64-i64:32:64-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-f80:32:32-n8:16:32-S32",
+  "executables": true,
+  "features": "-mmx,-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx,-avx2,-fma",
+  "linker": "gcc",
+  "linker-flavor": "ld",
+  "llvm-target": "i686-unknown-none",
+  "max-atomic-width": 32,
+  "os": "none",
+  "panic-strategy": "abort",
+  "relocation-model": "static",
+  "target-endian": "little",
+  "target-pointer-width": 32
+}

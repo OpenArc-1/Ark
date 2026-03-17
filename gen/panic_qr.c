@@ -9,6 +9,7 @@
 #include "ark/types.h"
 #include "ark/printk.h"
 #include "ark/panic.h"
+#include "gpu/vesa.h"
 
 void kernel_panic(const char *msg);
 
@@ -21,12 +22,6 @@ void kernel_panic(const char *msg);
 
 #define PANIC_LOG_SIZE  768
 #define PANIC_BOOT_MARKERS 8
-
-extern u8 *g_fb;
-extern u32 g_pitch;
-extern u32 g_w;
-extern u32 g_h;
-extern u32 g_Bpp;
 
 static char panic_log_buf[PANIC_LOG_SIZE];
 static u32 panic_log_pos = 0;
@@ -380,25 +375,19 @@ static void qr_generate(const char *data) {
 }
 
 static void panic_draw_pixel(int x, int y, u32 color) {
-    if (!g_fb || !g_pitch || !g_w || !g_h) return;
-    if (x < 0 || x >= (int)g_w || y < 0 || y >= (int)g_h) return;
-    if (g_Bpp == 4) {
-        u32 *p = (u32*)(g_fb + y * g_pitch + x * 4);
-        *p = color;
-    }
+    if (!vesa_is_ready()) return;
+    if (x < 0 || y < 0) return;
+    vesa_putpixel(x, y, color);
 }
 
 static void panic_draw_rect(int x, int y, int w, int h, u32 color) {
-    for (int py = y; py < y + h; py++) {
-        for (int px = x; px < x + w; px++) {
-            panic_draw_pixel(px, py, color);
-        }
-    }
+    if (!vesa_is_ready()) return;
+    vesa_fill_rect(x, y, w, h, color);
 }
 
-void panic_qr_draw_module(int mx, int my, int module_size, u32 fg_color, u32 bg_color) {
-    int px = mx * module_size;
-    int py = my * module_size;
+void panic_qr_draw_module(int mx, int my, int module_size, int offset_x, int offset_y, u32 fg_color, u32 bg_color) {
+    int px = offset_x + mx * module_size;
+    int py = offset_y + my * module_size;
     int val = qr_matrix[my][mx];
     u32 color = val ? fg_color : bg_color;
     panic_draw_rect(px, py, module_size, module_size, color);
@@ -409,21 +398,39 @@ void panic_qr_display(const char *qr_data) {
     
     printk("\n[QR] Debug data:\n%s\n", qr_data);
     
-    if (!g_fb || !g_pitch || !g_w || !g_h) {
+    if (!vesa_is_ready()) {
         printk("[QR] No framebuffer - cannot display QR\n");
         return;
     }
     
-    u32 qr_display_size = g_w < g_h ? g_w - 40 : g_h - 120;
+    vesa_fill_rect(10, 10, 100, 100, 0xFF0000FF);
+    printk("[QR] Test rectangle drawn\n");
+    return;
+    
+    if (!vesa_is_ready()) {
+        printk("[QR] No framebuffer - cannot display QR\n");
+        return;
+    }
+    
+    u32 screen_w = vesa_get_width();
+    u32 screen_h = vesa_get_height();
+    
+    printk("[QR] Screen: %ux%u\n", screen_w, screen_h);
+    
+    u32 qr_display_size = screen_w < screen_h ? screen_w - 40 : screen_h - 120;
     if (qr_display_size > 400) qr_display_size = 400;
     if (qr_display_size < 84) qr_display_size = 84;
     
     int module_size = qr_display_size / QR_SIZE;
     if (module_size < 1) module_size = 1;
     
+    printk("[QR] Module size: %d, display size: %u\n", module_size, qr_display_size);
+    
     int qr_actual_size = module_size * QR_SIZE;
-    int offset_x = (g_w - qr_actual_size) / 2;
+    int offset_x = (screen_w - qr_actual_size) / 2;
     int offset_y = 40;
+    
+    printk("[QR] Offset: %d,%d\n", offset_x, offset_y);
     
     u32 fg = 0xFFFFFFFF;
     u32 bg = 0xFF000000;
@@ -434,7 +441,7 @@ void panic_qr_display(const char *qr_data) {
     
     for (int y = 0; y < QR_SIZE; y++) {
         for (int x = 0; x < QR_SIZE; x++) {
-            panic_qr_draw_module(x, y, module_size, fg, bg);
+            panic_qr_draw_module(x, y, module_size, offset_x, offset_y, fg, bg);
         }
     }
     
@@ -520,10 +527,8 @@ static void panic_build_qr_data(char *buf, int buf_len, const char *reason,
 void kernel_panic_with_qr(const char *msg) {
     __asm__ __volatile__("cli");
     
-    u32 esp = 0, ebp = 0;
+#if defined(CONFIG_64BIT) && CONFIG_64BIT
     u64 rsp = 0, rip = 0;
-    
-#if CONFIG_64BIT
     u64 rax = 0, rbx = 0, rcx = 0, rdx = 0;
     u64 rsi = 0, rdi = 0, rbp = 0, rflags = 0;
     __asm__ volatile (
@@ -541,9 +546,9 @@ void kernel_panic_with_qr(const char *msg) {
           "=m"(rsp)
     );
 #else
+    u32 esp = 0, ebp = 0;
     u32 eax = 0, ebx = 0, ecx = 0, edx = 0;
     u32 esi = 0, edi = 0, eflags = 0;
-    u32 esp = 0;
     __asm__ volatile (
         "mov %%eax, %0\n"
         "mov %%ebx, %1\n"
@@ -558,7 +563,6 @@ void kernel_panic_with_qr(const char *msg) {
           "=m"(esi), "=m"(edi), "=m"(ebp), "=m"(eflags),
           "=m"(esp)
     );
-    rsp = esp;
 #endif
     
     printk(T, "*** KERNEL PANIC ***\n");
@@ -573,7 +577,7 @@ void kernel_panic_with_qr(const char *msg) {
     id_ldm();
     printk("\n");
     
-#if CONFIG_64BIT
+#if defined(CONFIG_64BIT) && CONFIG_64BIT
     printk(T, "Registers:\n");
     printk("  RIP=%llx RSP=%llx RBP=%llx\n", 
            (unsigned long long)rip, (unsigned long long)rsp, (unsigned long long)rbp);
@@ -583,7 +587,7 @@ void kernel_panic_with_qr(const char *msg) {
 #endif
     
     char qr_data[256];
-#if CONFIG_64BIT
+#if defined(CONFIG_64BIT) && CONFIG_64BIT
     panic_build_qr_data(qr_data, sizeof(qr_data), msg ? msg : "unknown",
                         rip, rsp, rbp);
 #else

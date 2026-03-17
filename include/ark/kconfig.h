@@ -2,12 +2,12 @@
 #pragma once
 
 /* Architecture */
-#define CONFIG_ARCH          "x86_64"
-#define CONFIG_BITS          64
-#define CONFIG_32BIT         0
-#define CONFIG_64BIT         1
-#define CONFIG_ARCH_X86          0
-#define CONFIG_ARCH_X86_64       1
+#define CONFIG_ARCH          "x86"
+#define CONFIG_BITS          32
+#define CONFIG_32BIT         1
+#define CONFIG_64BIT         0
+#define CONFIG_ARCH_X86          1
+#define CONFIG_ARCH_X86_64       0
 
 /* Build */
 #define CONFIG_OPT_LEVEL     2

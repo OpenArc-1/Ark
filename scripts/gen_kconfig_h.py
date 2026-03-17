@@ -33,7 +33,7 @@ DEFAULTS: dict[str, str] = {
     "SCHED_ENABLE": "1", "SCHED_PREEMPT": "1", "SCHED_TIMESLICE_MS": "10",
     "SCHED_MAX_TASKS": "64", "SCHED_STACK_KB": "16", "SCHED_JOB_CONTROL": "1", "SCHED_PIT_HZ": "100",
     "SYSCALL_ENABLE": "1", "ELF_LOADER": "1",
-    "DEBUG_VERBOSE": "0", "DEBUG_KASAN": "0", "DEBUG_PANIC_DUMP": "1",
+    "DEBUG_VERBOSE": "0", "DEBUG_KASAN": "0", "DEBUG_PANIC_DUMP": "1", "DEBUG_PANIC_QR": "1",
     "ZIG_ENABLE": "0",
 }
 
@@ -178,6 +178,7 @@ def main():
         f"#define CONFIG_DEBUG_VERBOSE    {_b(cfg,'DEBUG_VERBOSE')}",
         f"#define CONFIG_DEBUG_KASAN      {_b(cfg,'DEBUG_KASAN')}",
         f"#define CONFIG_DEBUG_PANIC_DUMP {_b(cfg,'DEBUG_PANIC_DUMP')}",
+        f"#define CONFIG_DEBUG_PANIC_QR   {_b(cfg,'DEBUG_PANIC_QR')}",
     ]
     L += ["", "/* Zig */",
         f"#define CONFIG_ZIG_ENABLE      {_b(cfg,'ZIG_ENABLE')}",

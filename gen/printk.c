@@ -22,6 +22,7 @@
 
 #include <stdarg.h>
 #include "ark/types.h"
+#include "ark/arch.h"
 #include "ark/printk.h"
 #include "psf_font_data.h"
 #include "ark/log.h"
@@ -69,12 +70,12 @@ u32  printk_tick(void)          { g_jiffies++; if((g_jiffies%5U)==0) printk_curs
 #define FONT_W  8
 #define FONT_H  PSF_CHARSIZE   /* 16 */
 
-static u8  *g_fb     = 0;
-static u32  g_pitch  = 0;
-static u32  g_bpp    = 32;   /* bits per pixel */
-static u32  g_Bpp    = 4;    /* bytes per pixel = g_bpp/8 */
-static u32  g_w      = 0;
-static u32  g_h      = 0;
+u8  *g_fb     = 0;
+u32  g_pitch  = 0;
+u32  g_bpp    = 32;   /* bits per pixel */
+u32  g_Bpp    = 4;    /* bytes per pixel = g_bpp/8 */
+u32  g_w      = 0;
+u32  g_h      = 0;
 static u32  g_col    = 0;
 static u32  g_row    = 0;
 static u32  g_fg     = 0x00AAAAAA;
@@ -361,6 +362,9 @@ static void putc_out(char c){
     }
     serial_putc(c);
     log_putchar(c);
+    
+    extern void panic_log_putchar(char c) __attribute__((weak));
+    panic_log_putchar(c);
 }
 
 /* ── Number formatting ───────────────────────────────────────────────────── */
@@ -415,6 +419,56 @@ static void put_int(int v){
     else put_uint32((u32)v,10,false);
 }
 static void put_str(const char *s){if(!s)s="(null)";while(*s)putc_out(*s++);}
+
+/* ── Enhanced Address Printing ───────────────────────────────────────────── */
+static void put_ptr_width(u64 v, int width){
+    const char *d = "0123456789abcdef";
+    char buf[32];
+    int i = 0;
+    if(!v){
+        putc_out('0');return;
+    }
+    while(v && i < 32){
+        buf[i++] = d[v & 0xF];
+        v >>= 4;
+    }
+    while(i < width) buf[i++] = '0';
+    for(int j = i-1; j >= 0; j--) putc_out(buf[j]);
+}
+
+void printk_put_ptr(void *ptr){
+    putc_out('0');putc_out('x');
+    put_ptr_width((u64)(usize)ptr, sizeof(void*) * 2);
+}
+
+void printk_put_phys(u64 phys){
+    putc_out('0');putc_out('x');
+    put_ptr_width(phys, sizeof(phys_addr_t) * 2);
+}
+
+void printk_put_hex(u8 byte){
+    const char *d = "0123456789abcdef";
+    putc_out(d[(byte >> 4) & 0xF]);
+    putc_out(d[byte & 0xF]);
+}
+
+void printk_hex_dump(const char *name, const void *addr, u32 len){
+    const u8 *p = (const u8 *)addr;
+    printk("[HEX] %s: %p +%u bytes\n", name ? name : "dump", addr, len);
+    for(u32 i = 0; i < len; i++){
+        if(i % 16 == 0){
+            if(i > 0) putc_out('\n');
+            printk_put_ptr((void*)(usize)(p + i));
+            putc_out(':');
+            putc_out(' ');
+        }else if(i % 8 == 0){
+            putc_out(' ');
+        }
+        printk_put_hex(p[i]);
+        putc_out(' ');
+    }
+    if(len > 0 && len % 16 != 0) putc_out('\n');
+}
 
 /* ── Timestamp ───────────────────────────────────────────────────────────── */
 const char *_PRINTK_T_SENTINEL = (const char*)0x1;
@@ -524,7 +578,19 @@ int vprintk(const char *fmt, va_list ap){
             break;
         case 'p':{
             unsigned long v=(unsigned long)va_arg(ap,void*);
-            putc_out('0');putc_out('x');put_uint32((u32)v,16,false);break;}
+            putc_out('0');putc_out('x');
+            put_ptr_width(v, sizeof(unsigned long) * 2);
+            break;}
+        case 'P':{
+            u64 v=(u64)(usize)va_arg(ap,void*);
+            putc_out('0');putc_out('x');
+            put_ptr_width(v, sizeof(void*) * 2);
+            break;}
+        case 'h':{
+            u64 v=(u64)(usize)va_arg(ap,void*);
+            putc_out('0');putc_out('x');
+            put_ptr_width(v, sizeof(phys_addr_t) * 2);
+            break;}
         default: break;
         }
     }

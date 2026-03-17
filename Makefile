@@ -276,7 +276,7 @@ ifeq ($(ARCH),x86_64)
 # Rust USB keyboard driver — x86_64 only (ELF64 object, incompatible with i386)
 $(OBJDIR)/rust/rust_usb_kbd.o: $(RUST_SRC)/lib.rs $(wildcard $(RUST_SRC)/*.rs) $(wildcard $(RUST_SRC)/*/*.rs)
 	@mkdir -p $(dir $@)
-	@echo "  RUST    $@"
+	@echo "  RC    $@"
 	@. $(HOME)/.cargo/env && cd rust && rustc --edition 2021 --crate-type=staticlib \
 		--target x86_64-unknown-linux-gnu \
 		-o ../$@ src/lib.rs 2>&1 | grep -v "^warning:" || true
@@ -395,26 +395,26 @@ $(ARKIMAGE): $(LINKER_SCRIPT) $(OBJS)
 	@mkdir -p $(IMG_DIR)
 	@printf "  LD      %s\n" $@
 	@$(CC) $(LDFLAGS) -T $(LINKER_SCRIPT) -o $@ $(OBJS)
-	@printf "  OK      $(ARKIMAGE)  (%s bytes)\n" $$(wc -c < $(ARKIMAGE))
+	@printf "  BUILD      $(ARKIMAGE)  (%s bytes)\n" $$(wc -c < $(ARKIMAGE))
 
 # -----------------------------------------------------------------------------
 # Compile rules
 # -----------------------------------------------------------------------------
 $(OBJDIR)/%.o: %.c $(KCONFIG_HEADER)
 	@mkdir -p $(dir $@)
-	@printf "  CC      %s\n" $<
+	@printf "  GCC      %s\n" $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 NASM_FORMAT := $(if $(filter x86_64,$(ARCH)),elf64,elf32)
 $(OBJDIR)/arch/x86/bios.o: arch/x86/bios.S
 	@mkdir -p $(dir $@)
-	@printf "  AS      %s\n" $<
+	@printf "  ASM      %s\n" $<
 	@$(NASM) -f $(NASM_FORMAT) $< -o $@
 
 GAS_BITS := $(if $(filter x86_64,$(ARCH)),--64,--32)
 $(OBJDIR)/arch/$(ARCH)/%.o: arch/$(ARCH)/%.S
 	@mkdir -p $(dir $@)
-	@printf "  AS      %s\n" $<
+	@printf "  GAS      %s\n" $<
 	@$(AS) $(GAS_BITS) -o $@ $<
 
 # -----------------------------------------------------------------------------

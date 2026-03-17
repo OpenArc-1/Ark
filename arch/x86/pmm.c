@@ -45,6 +45,15 @@ void pmm_init(u32 mem_kb) {
     used_frames = ke - ks + 1 + start_frame;
     printk(T, "pmm (32-bit): %u MiB total, %u frames available\n",
            mem_kb / 1024, total_frames - used_frames);
+
+    printk("[PMM] Memory layout:\n");
+    printk("  KERNEL: virt 0x%08x - 0x%08x (size: %u KB)\n",
+           (u32)_kernel_start, (u32)_kernel_end,
+           ((u32)_kernel_end - (u32)_kernel_start) / 1024);
+    printk("  BITMAP: virt 0x%08x (size: %u bytes)\n",
+           (u32)bitmap, BITMAP_WORDS * 4);
+    printk("  FRAMES: total=%u used=%u free=%u\n",
+           total_frames, used_frames, total_frames - used_frames);
 }
 
 void pmm_init_from_multiboot(multiboot_info_t *mbi) {
@@ -98,6 +107,14 @@ void pmm_init_from_multiboot(multiboot_info_t *mbi) {
     used_frames = ke - ks + 1;
     printk(T, "pmm (32-bit): detected %u MiB total, %u frames available\n",
            max_mem / (1024 * 1024), total_frames - used_frames);
+
+    printk("[PMM] Multiboot memory map parsed:\n");
+    printk("  KERNEL: virt %p - %p\n",
+           (void*)(usize)(u32)_kernel_start, (void*)(usize)(u32)_kernel_end);
+    printk("  BITMAP: virt %p (size: %u bytes)\n",
+           (void*)(usize)bitmap, BITMAP_WORDS * 4);
+    printk("  FRAMES: total=%u used=%u free=%u\n",
+           total_frames, used_frames, total_frames - used_frames);
 }
 
 phys_addr_t pmm_alloc_frame(void) {
@@ -105,7 +122,15 @@ phys_addr_t pmm_alloc_frame(void) {
         if (!bm_test(i)) {
             bm_set(i);
             used_frames++;
-            return (phys_addr_t)(i * PAGE_SIZE);
+            phys_addr_t addr = (phys_addr_t)(i * PAGE_SIZE);
+#if CONFIG_PRINTK_ENABLE
+            static int alloc_count = 0;
+            if(alloc_count++ % 256 == 0){
+                printk("[PMM] alloc: phys=%p frame=%u free=%u\n",
+                       (void*)(usize)addr, i, total_frames - used_frames);
+            }
+#endif
+            return addr;
         }
     }
     kernel_panic("PMM: out of physical memory");
@@ -117,6 +142,13 @@ void pmm_free_frame(phys_addr_t addr) {
     if (bm_test(frame)) {
         bm_clear(frame);
         used_frames--;
+#if CONFIG_PRINTK_ENABLE
+        static int free_count = 0;
+        if(free_count++ % 256 == 0){
+            printk("[PMM] free:  phys=%p frame=%u free=%u\n",
+                   (void*)(usize)addr, frame, total_frames - used_frames);
+        }
+#endif
     }
 }
 

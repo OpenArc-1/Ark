@@ -140,6 +140,7 @@ typedef struct {
     int  debug_verbose;
     int  debug_kasan;
     int  debug_panic_dump;
+    int  debug_panic_qr;
     /* Language runtime support */
     int  zig_enable;
     int  rust_enable;
@@ -170,7 +171,7 @@ static void apply_defconfig(void) {
     G.pci_enable=1; G.pci_probe_all=1;
     G.sched_enable=1; G.sched_preempt=1; G.sched_timeslice_ms=10;
     G.sched_max_tasks=64; G.sched_stack_kb=16; G.sched_job_control=1;
-    G.syscall_enable=1; G.elf_loader=1; G.debug_panic_dump=1;
+    G.syscall_enable=1; G.elf_loader=1; G.debug_panic_dump=1; G.debug_panic_qr=1;
     G.zig_enable=0; G.rust_enable=0;
 }
 
@@ -251,7 +252,7 @@ static void load_kconfig(void) {
         LI(SCHED_STACK_KB,sched_stack_kb) LI(SCHED_JOB_CONTROL,sched_job_control)
         LI(SYSCALL_ENABLE,syscall_enable) LI(ELF_LOADER,elf_loader)
         LI(DEBUG_VERBOSE,debug_verbose) LI(DEBUG_KASAN,debug_kasan)
-        LI(DEBUG_PANIC_DUMP,debug_panic_dump)
+        LI(DEBUG_PANIC_DUMP,debug_panic_dump) LI(DEBUG_PANIC_QR,debug_panic_qr)
         LI(ZIG_ENABLE,zig_enable) LI(RUST_ENABLE,rust_enable)
 #undef LS
 #undef LI
@@ -299,8 +300,8 @@ static void save_kconfig(void) {
             G.sched_enable,G.sched_preempt,G.sched_timeslice_ms,
             G.sched_max_tasks,G.sched_stack_kb,G.sched_job_control);
     fprintf(f,"\nSYSCALL_ENABLE=%d\nELF_LOADER=%d\n",G.syscall_enable,G.elf_loader);
-    fprintf(f,"\nDEBUG_VERBOSE=%d\nDEBUG_KASAN=%d\nDEBUG_PANIC_DUMP=%d\n",
-            G.debug_verbose,G.debug_kasan,G.debug_panic_dump);
+    fprintf(f,"\nDEBUG_VERBOSE=%d\nDEBUG_KASAN=%d\nDEBUG_PANIC_DUMP=%d\nDEBUG_PANIC_QR=%d\n",
+            G.debug_verbose,G.debug_kasan,G.debug_panic_dump,G.debug_panic_qr);
     fprintf(f,"\nZIG_ENABLE=%d\nRUST_ENABLE=%d\n",
             G.zig_enable,G.rust_enable);
     fclose(f);
@@ -1096,6 +1097,7 @@ static void menu_debug(void) {
     mi_t items[] = {
         MB("Verbose debug output", debug_verbose,    "Extra debug messages at boot."),
         MB("Panic register dump",  debug_panic_dump, "Dump registers on kernel panic."),
+        MB("Panic QR Code",        debug_panic_qr,    "Show QR code on panic with debug info."),
         MB("KASAN (stub)",         debug_kasan,      "Kernel address sanitiser — stub only."),
         MI("Log level (0-7)",      loglevel,         "0=silent  4=info  7=all."),
     };

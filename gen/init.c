@@ -65,6 +65,7 @@ extern u8   ramfs_has_init(void);
 extern u8  *ramfs_get_init(u32 *out_size);
 extern void dkm_init_kernel(void);
 extern void smbios_dump(void);
+extern void panic_set_boot_phase(const char *phase);
 
 extern ark_fb_info_t g_fb_info;
 
@@ -95,8 +96,10 @@ static int run_elf(u8 *data, u32 size) {
 
 void kernel_main(void) {
 
-    printk(T, "Ark %s  build: %s\n", K_ID, BUILD);
+    panic_set_boot_phase("boot");
+    kid_main();
     printk(T, "display: %ux%u\n", vesa_get_width(), vesa_get_height());
+    panic_set_boot_phase("display");
 
     /* Wire display.c to the framebuffer so display_putc / display_puts
      * and the shadow buffer are live for the TTY, shell, and WM layers. */
@@ -106,27 +109,32 @@ void kernel_main(void) {
 
     ark_fpu_init();
     printk(T, "dbg: fpu_init ok\n");
+    panic_set_boot_phase("fpu");
 
     { extern void cpu_verify(void); cpu_verify(); }
     printk(T, "dbg: cpu_verify ok\n");
 
     id_ldm();
     printk(T, "dbg: id_ldm ok\n");
+    panic_set_boot_phase("id");
 
     serial_init();
     printk(T, "serial: COM1 ready\n");
 
     idt_init();
     printk(T, "idt: ready\n");
+    panic_set_boot_phase("idt");
 
     /* Early init file check - fail fast before expensive PCI/USB scans */
     {
         u32 init_size = 0;
         u8 *init_data = ramfs_get_init(&init_size);
         if (!init_data || init_size == 0) {
+            panic_set_boot_phase("no-init");
             kernel_panic("no /init found — pass your ELF via: qemu -initrd <elf>");
         }
     }
+    panic_set_boot_phase("init-check");
 
 #if CONFIG_SCHED_ENABLE
     sched_init();
@@ -134,26 +142,32 @@ void kernel_main(void) {
 
     printk(T, "PCI: scanning\n");
     scanAll();
+    panic_set_boot_phase("pci");
 
     if (smbios_init()) { printk(T, "SMBIOS: OK\n"); smbios_dump(); }
     else               { printk(T, "SMBIOS: not found\n"); }
+    panic_set_boot_phase("smbios");
 
 #if CONFIG_AUDIO_ENABLE
     kernel_aud_init();
 #endif
+    panic_set_boot_phase("audio");
 
     show_sysinfo_bios();
     rtc_time_t t = read_rtc();
     printk(T, "rtc: %02d:%02d:%02d UTC\n", t.hour, t.min, t.sec);
+    panic_set_boot_phase("rtc");
 
 #if CONFIG_USB_ENABLE
     printk(T, "USB: init\n");
     usb_init();
     scan_usb_controllers();
     printk(T, "USB: ready\n");
+    panic_set_boot_phase("usb");
 #endif
 
     input_init();
+    panic_set_boot_phase("input");
 
     {
         extern void ark_syscall_fb_map(void);
@@ -161,6 +175,7 @@ void kernel_main(void) {
         ark_syscall_fb_map();
         ps2_mouse_kernel_init();
     }
+    panic_set_boot_phase("input2");
 
 #if CONFIG_NET_ENABLE
     print_eth_devices();
@@ -171,12 +186,15 @@ void kernel_main(void) {
         printk(T, "net: DHCP bound — IP=%s\n", ip_print(g_net_config.local_ip));
     else
         printk(T, "net: DHCP timeout\n");
+    panic_set_boot_phase("net");
 #endif
 
     printk(T, "fs: init\n");
     fs_built_in_init();
+    panic_set_boot_phase("fs");
 
     dkm_init_kernel();
+    panic_set_boot_phase("dkm");
 
 #if CONFIG_SCHED_ENABLE
     {

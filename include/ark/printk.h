@@ -5,14 +5,33 @@
  * Includes -like boot logging with timestamps.
  */
 
- #pragma once
+#pragma once
 
- #include "ark/types.h"
- 
- /* Kernel printk function */
- int printk(const char *fmt, ...);
- 
- /* -style kernel logging with automatic timestamps */
+#include "ark/types.h"
+
+/* Forward declare phys_addr_t - defined in ark/arch.h */
+/* For 32-bit: phys_addr_t = u32, 64-bit: phys_addr_t = u64 */
+
+/* Kernel printk function */
+int printk(const char *fmt, ...);
+
+/* ── Enhanced Address Printing API ────────────────────────────────────────── */
+/* Print pointer with full address width (auto-detects 32/64-bit) */
+void printk_put_ptr(void *ptr);
+
+/* Print physical address with full width */
+void printk_put_phys(u64 phys);
+
+/* Print single byte as two hex digits */
+void printk_put_hex(u8 byte);
+
+/* Print hex dump of memory region
+ * name: label for the dump
+ * addr: starting virtual address
+ * len: number of bytes to dump */
+void printk_hex_dump(const char *name, const void *addr, u32 len);
+
+/* -style kernel logging with automatic timestamps */
  int printk_info(const char *fmt, ...);  /* [    T.XXXXXX] message */
  int printk_warn(const char *fmt, ...);  /* [    T.XXXXXX] [WARN] message (yellow) */
  int printk_err(const char *fmt, ...);   /* [    T.XXXXXX] [ERR] message (red) */

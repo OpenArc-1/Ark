@@ -12,7 +12,7 @@
 /* Build */
 #define CONFIG_OPT_LEVEL     2
 #define CONFIG_DEBUG         1
-#define CONFIG_WERROR        1
+#define CONFIG_WERROR        0
 #define CONFIG_CODENAME      "allyes"
 #define CONFIG_INIT_BIN      "/init"
 
@@ -109,6 +109,7 @@
 #define CONFIG_DEBUG_VERBOSE    1
 #define CONFIG_DEBUG_KASAN      1
 #define CONFIG_DEBUG_PANIC_DUMP 1
+#define CONFIG_DEBUG_PANIC_QR   1
 
 /* Zig */
-#define CONFIG_ZIG_ENABLE      1
+#define CONFIG_ZIG_ENABLE      0

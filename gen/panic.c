@@ -11,6 +11,14 @@
 #include "hw/vendor.h"
 #include "./init.h"
 
+#if CONFIG_DEBUG_PANIC_QR
+
+void kernel_panic(const char *msg) {
+    kernel_panic_with_qr(msg);
+}
+
+#else
+
 void kernel_panic(const char *msg) {
     __asm__ __volatile__("cli");
 
@@ -32,6 +40,8 @@ void kernel_panic(const char *msg) {
     for (;;)
         __asm__ __volatile__("hlt");
 }
+
+#endif
 
 void mascot(void) {
     printk("       .~.~.~.\n");
